@@ -209,7 +209,11 @@ export default function Home() {
             <div className="flex-1 overflow-y-auto px-8 py-7 scrollbar-hide">
               <MainFocusSection
                 focus={dayData.mainFocus}
+                completed={dayData.mainFocusCompleted ?? false}
                 onChange={(focus) => handleDataChange({ ...dayData, mainFocus: focus })}
+                onToggle={() =>
+                  handleDataChange({ ...dayData, mainFocusCompleted: !dayData.mainFocusCompleted })
+                }
               />
               <TaskList
                 title="Priority Tasks"

@@ -13,6 +13,7 @@ export interface TimeBlock {
 
 export interface DayData {
   mainFocus: string;
+  mainFocusCompleted: boolean;
   highPriorityTasks: Task[];
   generalTasks: Task[];
   timeBlocks: TimeBlock[];
@@ -28,6 +29,7 @@ export interface PlannerData {
 
 export const defaultDayData: DayData = {
   mainFocus: '',
+  mainFocusCompleted: false,
   highPriorityTasks: [],
   generalTasks: [],
   timeBlocks: Array.from({ length: 17 }, (_, i) => ({
