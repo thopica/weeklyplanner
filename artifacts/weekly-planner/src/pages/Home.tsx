@@ -66,10 +66,10 @@ export default function Home() {
   const weekNumber = getWeek(selectedDate, { weekStartsOn: 1 });
   const year = format(selectedDate, "yyyy");
 
-  const totalTasks = dayData.highPriorityTasks.length + dayData.generalTasks.length;
-  const completedTasks =
-    dayData.highPriorityTasks.filter((t) => t.completed).length +
-    dayData.generalTasks.filter((t) => t.completed).length;
+  // Merge both legacy arrays into one unified priority task list
+  const allTasks = [...dayData.highPriorityTasks, ...dayData.generalTasks];
+  const totalTasks = allTasks.length;
+  const completedTasks = allTasks.filter((t) => t.completed).length;
 
   const activeTheme = themes.find((t) => t.id === currentTheme) ?? themes[0];
 
@@ -212,16 +212,12 @@ export default function Home() {
                 onChange={(focus) => handleDataChange({ ...dayData, mainFocus: focus })}
               />
               <TaskList
-                title="High Priority"
-                tasks={dayData.highPriorityTasks}
-                onChange={(tasks) => handleDataChange({ ...dayData, highPriorityTasks: tasks })}
+                title="Priority Tasks"
+                tasks={allTasks}
+                onChange={(tasks) =>
+                  handleDataChange({ ...dayData, highPriorityTasks: tasks, generalTasks: [] })
+                }
                 accentColor="primary"
-              />
-              <TaskList
-                title="General Tasks"
-                tasks={dayData.generalTasks}
-                onChange={(tasks) => handleDataChange({ ...dayData, generalTasks: tasks })}
-                accentColor="secondary"
               />
             </div>
 
