@@ -1,9 +1,13 @@
-import { useState, useEffect } from "react";
-import { format, parseISO } from "date-fns";
-import { Settings } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { format, parseISO, getWeek } from "date-fns";
+import { Settings, Palette } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { getSelectedDate, saveSelectedDate, getDayData, saveDayData, getPlannerData } from "@/lib/storage";
-import { DayData } from "@/lib/types";
+import {
+  getSelectedDate, saveSelectedDate, getDayData, saveDayData,
+  getPlannerData, getTheme, saveTheme,
+} from "@/lib/storage";
+import { DayData, PlannerData } from "@/lib/types";
+import { themes } from "@/lib/themes";
 import { WeeklyRibbon } from "@/components/WeeklyRibbon";
 import { MainFocusSection } from "@/components/MainFocusSection";
 import { TaskList } from "@/components/TaskList";
@@ -18,9 +22,15 @@ import { motion, AnimatePresence } from "framer-motion";
 export default function Home() {
   const [selectedDateStr, setSelectedDateStr] = useState<string>(getSelectedDate());
   const [dayData, setDayData] = useState<DayData | null>(null);
-  
+  const [plannerData, setPlannerData] = useState<PlannerData>(getPlannerData());
+  const [currentTheme, setCurrentTheme] = useState(getTheme());
+  const [showThemePicker, setShowThemePicker] = useState(false);
+  const [rightTab, setRightTab] = useState<"schedule" | "wellness">("schedule");
+  const themePickerRef = useRef<HTMLDivElement>(null);
+
   const loadData = () => {
     setDayData(getDayData(selectedDateStr));
+    setPlannerData(getPlannerData());
   };
 
   useEffect(() => {
@@ -28,106 +38,251 @@ export default function Home() {
     loadData();
   }, [selectedDateStr]);
 
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (themePickerRef.current && !themePickerRef.current.contains(e.target as Node)) {
+        setShowThemePicker(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   if (!dayData) return null;
 
   const handleDataChange = (newData: DayData) => {
     setDayData(newData);
     saveDayData(selectedDateStr, newData);
+    setPlannerData(getPlannerData());
+  };
+
+  const handleThemeChange = (themeId: string) => {
+    setCurrentTheme(themeId);
+    saveTheme(themeId);
+    setShowThemePicker(false);
   };
 
   const selectedDate = parseISO(selectedDateStr);
+  const weekNumber = getWeek(selectedDate, { weekStartsOn: 1 });
+  const year = format(selectedDate, "yyyy");
+
+  const totalTasks = dayData.highPriorityTasks.length + dayData.generalTasks.length;
+  const completedTasks =
+    dayData.highPriorityTasks.filter((t) => t.completed).length +
+    dayData.generalTasks.filter((t) => t.completed).length;
+
+  const activeTheme = themes.find((t) => t.id === currentTheme) ?? themes[0];
 
   return (
-    <div className="min-h-screen w-full bg-background flex flex-col font-sans transition-colors duration-500">
-      <header className="px-6 py-6 md:px-10 max-w-[1400px] mx-auto w-full flex items-center justify-between">
+    <div
+      className="h-screen flex flex-col bg-background overflow-hidden"
+      data-testid="app-root"
+    >
+      {/* ── HEADER ── */}
+      <header className="flex items-center justify-between px-8 py-5 border-b border-border bg-card shrink-0">
         <div>
-          <h1 className="text-2xl md:text-3xl font-serif text-foreground font-medium tracking-tight">
+          <h1
+            className="text-3xl font-serif font-semibold tracking-tight text-foreground"
+            data-testid="header-date"
+          >
             {format(selectedDate, "EEEE, MMMM do")}
           </h1>
+          <p className="text-[11px] mt-0.5 font-semibold tracking-widest uppercase text-muted-foreground">
+            Week {weekNumber} · {year}
+          </p>
         </div>
-        <SettingsPanel 
-          trigger={
-            <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground hover:bg-accent rounded-full h-10 w-10">
-              <Settings className="w-5 h-5" />
-            </Button>
-          }
-          selectedDateStr={selectedDateStr}
-          onDataReset={loadData}
-        />
+
+        {/* Progress dots */}
+        {totalTasks > 0 && (
+          <div className="hidden md:flex items-center gap-3 px-4 py-2 rounded-full bg-background border border-border">
+            <div className="flex gap-1.5">
+              {Array.from({ length: Math.min(totalTasks, 12) }).map((_, i) => (
+                <div
+                  key={i}
+                  className="w-2 h-2 rounded-full transition-all duration-500"
+                  style={{
+                    background: i < completedTasks ? "hsl(var(--primary))" : "hsl(var(--border))",
+                  }}
+                />
+              ))}
+              {totalTasks > 12 && (
+                <span className="text-[10px] text-muted-foreground font-bold ml-1">+{totalTasks - 12}</span>
+              )}
+            </div>
+            <span className="text-xs font-bold text-muted-foreground">
+              {completedTasks}/{totalTasks}
+            </span>
+          </div>
+        )}
+
+        {/* Right controls */}
+        <div className="flex items-center gap-2">
+          {/* Inline theme picker */}
+          <div className="relative" ref={themePickerRef}>
+            <button
+              data-testid="button-theme-picker"
+              onClick={() => setShowThemePicker((v) => !v)}
+              className="flex items-center gap-2 px-3 py-2 rounded-xl bg-background border border-border text-muted-foreground hover:text-foreground transition-all text-xs font-semibold"
+            >
+              <Palette className="w-3.5 h-3.5" style={{ color: activeTheme.color }} />
+              <span className="hidden sm:inline text-foreground">{activeTheme.name}</span>
+              <div
+                className="w-3 h-3 rounded-full shrink-0"
+                style={{ background: activeTheme.color }}
+              />
+            </button>
+
+            <AnimatePresence>
+              {showThemePicker && (
+                <motion.div
+                  initial={{ opacity: 0, y: -8, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -8, scale: 0.95 }}
+                  transition={{ duration: 0.15 }}
+                  className="absolute right-0 top-11 z-50 p-2 rounded-2xl shadow-xl border border-border bg-card w-52 flex flex-col gap-1"
+                >
+                  {themes.map((theme) => (
+                    <button
+                      key={theme.id}
+                      data-testid={`button-theme-${theme.id}`}
+                      onClick={() => handleThemeChange(theme.id)}
+                      className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-left text-xs font-semibold transition-all"
+                      style={{
+                        background: theme.id === currentTheme ? "hsl(var(--accent))" : "transparent",
+                        color: "hsl(var(--foreground))",
+                        border: theme.id === currentTheme ? "2px solid hsl(var(--primary))" : "2px solid transparent",
+                      }}
+                    >
+                      <div
+                        className="w-4 h-4 rounded-full shrink-0 shadow-sm"
+                        style={{ background: theme.color }}
+                      />
+                      {theme.name}
+                    </button>
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          <SettingsPanel
+            trigger={
+              <Button
+                variant="ghost"
+                size="icon"
+                data-testid="button-settings"
+                className="text-muted-foreground hover:text-foreground hover:bg-accent rounded-xl h-9 w-9"
+              >
+                <Settings className="w-4 h-4" />
+              </Button>
+            }
+            selectedDateStr={selectedDateStr}
+            onDataReset={loadData}
+            currentTheme={currentTheme}
+            onThemeChange={handleThemeChange}
+          />
+        </div>
       </header>
 
-      <main className="flex-1 max-w-[1400px] mx-auto w-full px-6 md:px-10 pb-20">
-        <WeeklyRibbon 
-          selectedDate={selectedDate} 
-          onSelectDate={setSelectedDateStr} 
-        />
+      {/* ── WEEKLY RIBBON ── */}
+      <WeeklyRibbon
+        selectedDate={selectedDate}
+        onSelectDate={setSelectedDateStr}
+        plannerData={plannerData}
+      />
 
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={selectedDateStr}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.3 }}
-            className="grid grid-cols-1 lg:grid-cols-12 gap-8"
+      {/* ── MAIN 2-COLUMN BODY ── */}
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={selectedDateStr}
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -8 }}
+          transition={{ duration: 0.25 }}
+          className="flex flex-1 overflow-hidden"
+        >
+          {/* LEFT PANEL — focus + tasks + water bar */}
+          <div
+            className="flex flex-col border-r border-border overflow-hidden"
+            style={{ width: "60%", minWidth: 320 }}
           >
-            {/* Left Column: Tasks & Focus */}
-            <div className="lg:col-span-5 flex flex-col">
-              <MainFocusSection 
-                focus={dayData.mainFocus} 
-                onChange={(focus) => handleDataChange({ ...dayData, mainFocus: focus })} 
+            <div className="flex-1 overflow-y-auto px-8 py-7 scrollbar-hide">
+              <MainFocusSection
+                focus={dayData.mainFocus}
+                onChange={(focus) => handleDataChange({ ...dayData, mainFocus: focus })}
               />
-              
-              <TaskList 
-                title="High Priority" 
-                tasks={dayData.highPriorityTasks} 
+              <TaskList
+                title="High Priority"
+                tasks={dayData.highPriorityTasks}
                 onChange={(tasks) => handleDataChange({ ...dayData, highPriorityTasks: tasks })}
                 accentColor="primary"
               />
-              
-              <TaskList 
-                title="General Tasks" 
-                tasks={dayData.generalTasks} 
+              <TaskList
+                title="General Tasks"
+                tasks={dayData.generalTasks}
                 onChange={(tasks) => handleDataChange({ ...dayData, generalTasks: tasks })}
                 accentColor="secondary"
               />
             </div>
 
-            {/* Center Column: Schedule */}
-            <div className="lg:col-span-4">
-              <TimeBlockSchedule 
-                blocks={dayData.timeBlocks} 
-                onChange={(blocks) => handleDataChange({ ...dayData, timeBlocks: blocks })} 
+            {/* Water tracker — always visible at bottom */}
+            <div className="shrink-0 border-t border-border px-8 py-4 bg-card">
+              <WaterTracker
+                count={dayData.waterGlasses}
+                onChange={(count) => handleDataChange({ ...dayData, waterGlasses: count })}
+                compact
               />
+            </div>
+          </div>
+
+          {/* RIGHT PANEL — tabbed: schedule | wellness */}
+          <div className="flex flex-col flex-1 overflow-hidden">
+            {/* Tab switcher */}
+            <div className="flex shrink-0 border-b border-border bg-card">
+              {(["schedule", "wellness"] as const).map((tab) => (
+                <button
+                  key={tab}
+                  data-testid={`tab-${tab}`}
+                  onClick={() => setRightTab(tab)}
+                  className="flex-1 py-3.5 text-[11px] font-bold tracking-widest uppercase transition-all"
+                  style={{
+                    color: rightTab === tab ? "hsl(var(--primary))" : "hsl(var(--muted-foreground))",
+                    borderBottom: rightTab === tab ? "2px solid hsl(var(--primary))" : "2px solid transparent",
+                  }}
+                >
+                  {tab}
+                </button>
+              ))}
             </div>
 
-            {/* Right Column: Wellness & Notes */}
-            <div className="lg:col-span-3 flex flex-col">
-              <WaterTracker 
-                count={dayData.waterGlasses} 
-                onChange={(count) => handleDataChange({ ...dayData, waterGlasses: count })} 
-              />
-              
-              <MealPlan 
-                meals={dayData.meals} 
-                onChange={(meals) => handleDataChange({ ...dayData, meals: meals })} 
-              />
-              
-              <GratitudeSection 
-                items={dayData.gratitude} 
-                onChange={(items) => handleDataChange({ ...dayData, gratitude: items })} 
-              />
-              
-              <div className="flex-1">
-                <BrainDump 
-                  text={dayData.brainDump} 
-                  onChange={(text) => handleDataChange({ ...dayData, brainDump: text })} 
+            {rightTab === "schedule" && (
+              <div className="flex-1 overflow-hidden">
+                <TimeBlockSchedule
+                  blocks={dayData.timeBlocks}
+                  onChange={(blocks) => handleDataChange({ ...dayData, timeBlocks: blocks })}
                 />
               </div>
-            </div>
-          </motion.div>
-        </AnimatePresence>
-      </main>
+            )}
+
+            {rightTab === "wellness" && (
+              <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6 scrollbar-hide">
+                <MealPlan
+                  meals={dayData.meals}
+                  onChange={(meals) => handleDataChange({ ...dayData, meals })}
+                />
+                <GratitudeSection
+                  items={dayData.gratitude}
+                  onChange={(items) => handleDataChange({ ...dayData, gratitude: items })}
+                />
+                <BrainDump
+                  text={dayData.brainDump}
+                  onChange={(text) => handleDataChange({ ...dayData, brainDump: text })}
+                />
+              </div>
+            )}
+          </div>
+        </motion.div>
+      </AnimatePresence>
     </div>
   );
 }
