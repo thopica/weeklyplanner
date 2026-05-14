@@ -13,7 +13,6 @@ import { MainFocusSection } from "@/components/MainFocusSection";
 import { TaskList } from "@/components/TaskList";
 import { TimeBlockSchedule } from "@/components/TimeBlockSchedule";
 import { WaterTracker } from "@/components/WaterTracker";
-import { MealPlan } from "@/components/MealPlan";
 import { GratitudeSection } from "@/components/GratitudeSection";
 import { BrainDump } from "@/components/BrainDump";
 import { SettingsPanel } from "@/components/SettingsPanel";
@@ -25,7 +24,6 @@ export default function Home() {
   const [plannerData, setPlannerData] = useState<PlannerData>(getPlannerData());
   const [currentTheme, setCurrentTheme] = useState(getTheme());
   const [showThemePicker, setShowThemePicker] = useState(false);
-  const [rightTab, setRightTab] = useState<"schedule" | "wellness">("schedule");
   const themePickerRef = useRef<HTMLDivElement>(null);
 
   const loadData = () => {
@@ -201,7 +199,7 @@ export default function Home() {
           transition={{ duration: 0.25 }}
           className="flex flex-1 overflow-hidden"
         >
-          {/* LEFT PANEL — focus + tasks + water bar */}
+          {/* LEFT PANEL — focus + tasks + gratitude + brain dump + water bar */}
           <div
             className="flex flex-col border-r border-border overflow-hidden"
             style={{ width: "60%", minWidth: 320 }}
@@ -223,6 +221,14 @@ export default function Home() {
                 }
                 accentColor="primary"
               />
+              <GratitudeSection
+                items={dayData.gratitude}
+                onChange={(items) => handleDataChange({ ...dayData, gratitude: items })}
+              />
+              <BrainDump
+                text={dayData.brainDump}
+                onChange={(text) => handleDataChange({ ...dayData, brainDump: text })}
+              />
             </div>
 
             {/* Water tracker — always visible at bottom */}
@@ -235,51 +241,21 @@ export default function Home() {
             </div>
           </div>
 
-          {/* RIGHT PANEL — tabbed: schedule | wellness */}
+          {/* RIGHT PANEL — schedule (always visible) */}
           <div className="flex flex-col flex-1 overflow-hidden">
-            {/* Tab switcher */}
-            <div className="flex shrink-0 border-b border-border bg-card">
-              {(["schedule", "wellness"] as const).map((tab) => (
-                <button
-                  key={tab}
-                  data-testid={`tab-${tab}`}
-                  onClick={() => setRightTab(tab)}
-                  className="flex-1 py-3.5 text-[11px] font-bold tracking-widest uppercase transition-all"
-                  style={{
-                    color: rightTab === tab ? "hsl(var(--primary))" : "hsl(var(--muted-foreground))",
-                    borderBottom: rightTab === tab ? "2px solid hsl(var(--primary))" : "2px solid transparent",
-                  }}
-                >
-                  {tab}
-                </button>
-              ))}
+            <div
+              className="shrink-0 px-6 py-3.5 border-b border-border bg-card"
+            >
+              <span className="text-[11px] font-bold tracking-widest uppercase" style={{ color: "hsl(var(--primary))" }}>
+                Schedule
+              </span>
             </div>
-
-            {rightTab === "schedule" && (
-              <div className="flex-1 overflow-hidden">
-                <TimeBlockSchedule
-                  blocks={dayData.timeBlocks}
-                  onChange={(blocks) => handleDataChange({ ...dayData, timeBlocks: blocks })}
-                />
-              </div>
-            )}
-
-            {rightTab === "wellness" && (
-              <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6 scrollbar-hide">
-                <MealPlan
-                  meals={dayData.meals}
-                  onChange={(meals) => handleDataChange({ ...dayData, meals })}
-                />
-                <GratitudeSection
-                  items={dayData.gratitude}
-                  onChange={(items) => handleDataChange({ ...dayData, gratitude: items })}
-                />
-                <BrainDump
-                  text={dayData.brainDump}
-                  onChange={(text) => handleDataChange({ ...dayData, brainDump: text })}
-                />
-              </div>
-            )}
+            <div className="flex-1 overflow-hidden">
+              <TimeBlockSchedule
+                blocks={dayData.timeBlocks}
+                onChange={(blocks) => handleDataChange({ ...dayData, timeBlocks: blocks })}
+              />
+            </div>
           </div>
         </motion.div>
       </AnimatePresence>
