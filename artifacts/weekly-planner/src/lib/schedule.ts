@@ -17,10 +17,7 @@ export type DayScheduleRange = {
   endMin: number;
 };
 
-/**
- * Microsoft Outlook default work hours:
- * Options → Calendar → "Work time" defaults to 8:00 AM – 5:00 PM.
- */
+/** Default workday window: 8:00 AM – 5:00 PM. */
 export const OUTLOOK_DEFAULT_DAY_RANGE: DayScheduleRange = {
   startMin: 8 * 60,
   endMin: 17 * 60,

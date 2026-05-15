@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { format, parseISO, getWeek } from "date-fns";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { Settings, Palette, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,17 +14,17 @@ import {
   getScheduleRange,
   getScheduleVisible,
   saveScheduleVisible,
+  getHabits,
 } from "@/lib/storage";
-import { DayData, PlannerData } from "@/lib/types";
+import { DayData, HabitDefinition, PlannerData } from "@/lib/types";
 import { themes } from "@/lib/themes";
 import { WeeklyRibbon } from "@/components/WeeklyRibbon";
 import { MainFocusSection } from "@/components/MainFocusSection";
 import { TaskList } from "@/components/TaskList";
 import { TimeBlockSchedule } from "@/components/TimeBlockSchedule";
-import { WaterTracker } from "@/components/WaterTracker";
+import { HabitsSection } from "@/components/HabitsSection";
 import { GratitudeSection } from "@/components/GratitudeSection";
 import { BrainDump } from "@/components/BrainDump";
-import { SettingsPanel } from "@/components/SettingsPanel";
 import { SchedulePaneResizeHandle } from "@/components/SchedulePaneResizeHandle";
 import { useSchedulePaneResize } from "@/hooks/use-schedule-pane-resize";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
@@ -36,6 +36,7 @@ import {
 import { cn } from "@/lib/utils";
 
 export default function Home() {
+  const [location] = useLocation();
   const reduceMotion = useReducedMotion();
   const [selectedDateStr, setSelectedDateStr] = useState<string>(getSelectedDate());
   const [dayData, setDayData] = useState<DayData | null>(null);
@@ -44,6 +45,7 @@ export default function Home() {
   const [currentTheme, setCurrentTheme] = useState(getTheme());
   const [showThemePicker, setShowThemePicker] = useState(false);
   const [scheduleVisible, setScheduleVisible] = useState(() => getScheduleVisible());
+  const [habits, setHabits] = useState<HabitDefinition[]>(() => getHabits());
   const { schedulePaneWidth, resizeHandleProps } = useSchedulePaneResize();
   const themePickerRef = useRef<HTMLDivElement>(null);
   const dateInputRef = useRef<HTMLInputElement>(null);
@@ -54,12 +56,19 @@ export default function Home() {
     setDayData(getDayData(selectedDateStr));
     setPlannerData(getPlannerData());
     setScheduleRange(getScheduleRange());
+    setHabits(getHabits());
   };
 
   useEffect(() => {
     saveSelectedDate(selectedDateStr);
     loadData();
   }, [selectedDateStr]);
+
+  useEffect(() => {
+    if (location === "/") {
+      loadData();
+    }
+  }, [location]);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -246,23 +255,18 @@ export default function Home() {
             </AnimatePresence>
           </div>
 
-          <SettingsPanel
-            trigger={
-              <Button
-                variant="ghost"
-                size="icon"
-                data-testid="button-settings"
-                aria-label="Settings"
-                className="h-8 w-8 text-muted-foreground hover:bg-accent hover:text-foreground"
-              >
-                <Settings className="h-4 w-4" strokeWidth={2} />
-              </Button>
-            }
-            selectedDateStr={selectedDateStr}
-            onDataReset={loadData}
-            currentTheme={currentTheme}
-            onThemeChange={handleThemeChange}
-          />
+          <Button
+            variant="ghost"
+            size="icon"
+            data-testid="button-settings"
+            aria-label="Settings"
+            className="h-8 w-8 text-muted-foreground hover:bg-accent hover:text-foreground"
+            asChild
+          >
+            <Link href="/settings">
+              <Settings className="h-4 w-4" strokeWidth={2} />
+            </Link>
+          </Button>
         </div>
       </header>
 
@@ -334,10 +338,12 @@ export default function Home() {
                   text={dayData.brainDump}
                   onChange={(text) => handleDataChange({ ...dayData, brainDump: text })}
                 />
-                <WaterTracker
-                  count={dayData.waterGlasses}
-                  onChange={(count) => handleDataChange({ ...dayData, waterGlasses: count })}
-                  embedded
+                <HabitsSection
+                  habits={habits}
+                  logs={dayData.habitLogs ?? {}}
+                  onChange={(habitLogs) =>
+                    handleDataChange({ ...dayData, habitLogs })
+                  }
                 />
               </motion.div>
             </motion.div>

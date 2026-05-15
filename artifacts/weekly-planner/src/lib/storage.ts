@@ -1,5 +1,11 @@
 import { format } from 'date-fns';
-import { PlannerData, DayData, defaultDayData, TimeBlock } from './types';
+import {
+  PlannerData,
+  DayData,
+  defaultDayData,
+  TimeBlock,
+  HabitDefinition,
+} from './types';
 import {
   type DayScheduleRange,
   clampBlockDuration,
@@ -145,13 +151,34 @@ export function saveScheduleRange(
   }
 }
 
+function normalizePlannerData(parsed: PlannerData): PlannerData {
+  return {
+    days: parsed.days ?? {},
+    habits: Array.isArray(parsed.habits) ? parsed.habits : [],
+  };
+}
+
+function normalizeDayData(raw: Partial<DayData> & { waterGlasses?: unknown }): DayData {
+  const { waterGlasses: _legacy, ...rest } = raw;
+  const merged: DayData = {
+    ...structuredClone(defaultDayData),
+    ...rest,
+    mainFocusCompleted: raw.mainFocusCompleted ?? false,
+    habitLogs:
+      raw.habitLogs && typeof raw.habitLogs === "object" && !Array.isArray(raw.habitLogs)
+        ? { ...raw.habitLogs }
+        : {},
+  };
+  return merged;
+}
+
 export function getPlannerData(): PlannerData {
   try {
     const data = localStorage.getItem(STORAGE_KEYS.PLANNER_DATA);
-    return data ? JSON.parse(data) : { days: {} };
+    return data ? normalizePlannerData(JSON.parse(data)) : { days: {}, habits: [] };
   } catch (e) {
     console.error("Failed to parse planner data", e);
-    return { days: {} };
+    return { days: {}, habits: [] };
   }
 }
 
@@ -175,9 +202,7 @@ export function getDayData(dateStr: string): DayData {
   const timeBlocks = normalizeBlocksToRange(migrated, range);
 
   const merged: DayData = {
-    ...structuredClone(defaultDayData),
-    ...raw,
-    mainFocusCompleted: raw.mainFocusCompleted ?? false,
+    ...normalizeDayData(raw as Partial<DayData> & { waterGlasses?: unknown }),
     timeBlocks,
   };
 
@@ -193,6 +218,40 @@ export function saveDayData(dateStr: string, dayData: DayData): void {
   const data = getPlannerData();
   data.days[dateStr] = dayData;
   savePlannerData(data);
+}
+
+export function getHabits(): HabitDefinition[] {
+  return getPlannerData().habits ?? [];
+}
+
+export function saveHabits(habits: HabitDefinition[]): void {
+  const data = getPlannerData();
+  data.habits = habits;
+  savePlannerData(data);
+}
+
+/** Remove logs for deleted habit ids across all stored days. */
+export function pruneHabitLogs(removedIds: string[]): void {
+  if (removedIds.length === 0) return;
+  const data = getPlannerData();
+  let changed = false;
+  for (const dateStr of Object.keys(data.days)) {
+    const day = data.days[dateStr];
+    if (!day?.habitLogs) continue;
+    const nextLogs = { ...day.habitLogs };
+    let dayChanged = false;
+    for (const id of removedIds) {
+      if (id in nextLogs) {
+        delete nextLogs[id];
+        dayChanged = true;
+      }
+    }
+    if (dayChanged) {
+      data.days[dateStr] = { ...day, habitLogs: nextLogs };
+      changed = true;
+    }
+  }
+  if (changed) savePlannerData(data);
 }
 
 export function getTheme(): string {
@@ -222,7 +281,23 @@ export function saveSelectedDate(dateStr: string): void {
 }
 
 export function loadDemoData(dateStr: string): void {
+  const demoHabitRun: HabitDefinition = {
+    id: "demo-habit-run",
+    name: "Go for a run",
+    kind: "boolean",
+    createdAt: new Date().toISOString(),
+  };
+  const demoHabitSteps: HabitDefinition = {
+    id: "demo-habit-steps",
+    name: "Daily steps",
+    kind: "quantifiable",
+    unit: "steps",
+    target: 1000,
+    createdAt: new Date().toISOString(),
+  };
+
   const data = getPlannerData();
+  data.habits = [demoHabitRun, demoHabitSteps];
   data.days[dateStr] = {
     mainFocus: "Finish the creative brief for client project",
     mainFocusCompleted: false,
@@ -245,10 +320,13 @@ export function loadDemoData(dateStr: string): void {
       { id: "demo-4", startMinute: 14 * 60 + 30, durationMinutes: 30, label: "Team check-in" },
       { id: "demo-5", startMinute: 15 * 60, durationMinutes: 120, label: "Afternoon focus" },
     ],
-    waterGlasses: 3,
     meals: { breakfast: "Oatmeal with berries", lunch: "Salad bowl", dinner: "Pasta" },
     gratitude: ["Sunshine today", "Good coffee", "Finishing a big task"],
     brainDump: "Need to remember to call Mom this weekend. Also, look up recipes for the dinner party on Friday.",
+    habitLogs: {
+      [demoHabitRun.id]: { completed: true },
+      [demoHabitSteps.id]: { actual: 890 },
+    },
   };
   savePlannerData(data);
 }
