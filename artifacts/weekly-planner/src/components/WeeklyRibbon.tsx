@@ -1,16 +1,23 @@
-import { useRef } from "react";
 import { format, startOfWeek, addDays, isSameDay, addWeeks, subWeeks } from "date-fns";
 import { ChevronLeft, ChevronRight, CalendarDays } from "lucide-react";
 import { PlannerData } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
 interface WeeklyRibbonProps {
   selectedDate: Date;
   onSelectDate: (dateStr: string) => void;
   plannerData: PlannerData;
+  scheduleVisible: boolean;
+  onToggleSchedule: () => void;
 }
 
-export function WeeklyRibbon({ selectedDate, onSelectDate, plannerData }: WeeklyRibbonProps) {
-  const dateInputRef = useRef<HTMLInputElement>(null);
+export function WeeklyRibbon({
+  selectedDate,
+  onSelectDate,
+  plannerData,
+  scheduleVisible,
+  onToggleSchedule,
+}: WeeklyRibbonProps) {
   const weekStart = startOfWeek(selectedDate, { weekStartsOn: 1 });
   const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
 
@@ -30,15 +37,6 @@ export function WeeklyRibbon({ selectedDate, onSelectDate, plannerData }: Weekly
     onSelectDate(todayStr);
   };
 
-  const handleDatePicker = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.value) onSelectDate(e.target.value);
-  };
-
-  const openDatePicker = () => {
-    dateInputRef.current?.showPicker?.();
-    dateInputRef.current?.click();
-  };
-
   const getTaskCount = (date: Date) => {
     const dateStr = format(date, "yyyy-MM-dd");
     const data = plannerData.days[dateStr];
@@ -49,73 +47,74 @@ export function WeeklyRibbon({ selectedDate, onSelectDate, plannerData }: Weekly
 
   return (
     <div
-      className="flex items-center px-4 py-2 border-b border-border bg-card shrink-0 gap-0.5"
+      className="flex shrink-0 items-center gap-0.5 border-b border-border bg-card px-2 py-1"
       data-testid="weekly-ribbon"
     >
-      {/* Prev week */}
       <button
+        type="button"
         onClick={goToPrevWeek}
         data-testid="button-prev-week"
         title="Previous week"
-        className="p-2 rounded-xl hover:bg-accent transition-colors text-muted-foreground hover:text-foreground shrink-0"
+        aria-label="Previous week"
+        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
       >
-        <ChevronLeft className="w-4 h-4" />
+        <ChevronLeft className="h-3.5 w-3.5" strokeWidth={2} />
       </button>
 
-      {/* Day buttons */}
-      <div className="flex flex-1 items-center gap-0.5 min-w-0 overflow-x-auto scrollbar-hide">
+      <div className="flex min-w-0 flex-1 items-center gap-0.5 overflow-x-auto scrollbar-hide">
         {days.map((date) => {
           const dateStr = format(date, "yyyy-MM-dd");
           const isSelected = isSameDay(date, selectedDate);
           const isToday = dateStr === todayStr;
           const { total, completed } = getTaskCount(date);
-          const remaining = total - completed;
+          const hasOpenTasks = total - completed > 0;
+          const allDone = total > 0 && completed === total;
 
           return (
             <button
               key={dateStr}
+              type="button"
               data-testid={`day-button-${dateStr}`}
               onClick={() => onSelectDate(dateStr)}
-              className="flex flex-col items-center gap-0.5 px-3 py-2 rounded-2xl transition-all duration-200 min-w-[58px] flex-1"
+              className="flex min-h-[34px] min-w-[40px] flex-1 flex-col items-center justify-center gap-0.5 rounded-lg px-1 py-1 font-sans transition-colors"
               style={{
                 background: isSelected
                   ? "hsl(var(--primary))"
                   : isToday
-                  ? "hsl(var(--accent))"
-                  : "transparent",
+                    ? "hsl(var(--accent))"
+                    : "transparent",
                 color: isSelected
                   ? "hsl(var(--primary-foreground))"
                   : isToday
-                  ? "hsl(var(--accent-foreground))"
-                  : "hsl(var(--muted-foreground))",
+                    ? "hsl(var(--accent-foreground))"
+                    : "hsl(var(--muted-foreground))",
                 outline: isToday && !isSelected ? "2px solid hsl(var(--primary))" : "none",
                 outlineOffset: "-2px",
               }}
             >
-              <span className="text-[10px] font-bold tracking-widest uppercase leading-none">
+              <span className="type-label leading-none">
                 {format(date, "EEE")}
               </span>
-              <span className="text-xl font-serif font-bold leading-tight">
+              <span className="font-serif text-lead font-bold leading-none tabular-nums">
                 {format(date, "d")}
               </span>
-              {/* Badge */}
-              <span className="h-4 flex items-center justify-center">
-                {remaining > 0 ? (
+              <span className="flex h-1.5 w-full items-center justify-center" aria-hidden>
+                {hasOpenTasks ? (
                   <span
-                    className="text-[9px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center leading-none"
+                    className="h-1.5 w-1.5 rounded-full"
                     style={{
-                      background: isSelected ? "rgba(255,255,255,0.28)" : "hsl(var(--primary))",
-                      color: isSelected ? "#fff" : "hsl(var(--primary-foreground))",
+                      background: isSelected
+                        ? "hsl(var(--primary-foreground) / 0.85)"
+                        : "hsl(var(--primary))",
                     }}
-                  >
-                    {remaining}
-                  </span>
-                ) : total > 0 ? (
+                  />
+                ) : allDone ? (
                   <span
-                    className="text-[9px] font-bold px-1.5 py-0.5 rounded-full leading-none"
+                    className="type-caption font-bold leading-none"
                     style={{
-                      background: isSelected ? "rgba(255,255,255,0.18)" : "hsl(var(--secondary))",
-                      color: isSelected ? "rgba(255,255,255,0.85)" : "hsl(var(--secondary-foreground))",
+                      color: isSelected
+                        ? "hsl(var(--primary-foreground) / 0.75)"
+                        : "hsl(var(--secondary))",
                     }}
                   >
                     ✓
@@ -127,26 +126,24 @@ export function WeeklyRibbon({ selectedDate, onSelectDate, plannerData }: Weekly
         })}
       </div>
 
-      {/* Next week */}
       <button
+        type="button"
         onClick={goToNextWeek}
         data-testid="button-next-week"
         title="Next week"
-        className="p-2 rounded-xl hover:bg-accent transition-colors text-muted-foreground hover:text-foreground shrink-0"
+        aria-label="Next week"
+        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
       >
-        <ChevronRight className="w-4 h-4" />
+        <ChevronRight className="h-3.5 w-3.5" strokeWidth={2} />
       </button>
 
-      {/* Divider */}
-      <div className="w-px h-6 bg-border mx-1 shrink-0" />
-
-      {/* Go to today (only shown when not on current week) */}
       {!isCurrentWeek && (
         <button
+          type="button"
           onClick={goToToday}
           data-testid="button-go-today"
           title="Go to today"
-          className="px-3 py-1.5 rounded-xl text-[10px] font-bold tracking-widest uppercase transition-all shrink-0"
+          className="type-label ml-0.5 shrink-0 rounded-lg px-2.5 py-1.5"
           style={{
             background: "hsl(var(--primary))",
             color: "hsl(var(--primary-foreground))",
@@ -156,31 +153,22 @@ export function WeeklyRibbon({ selectedDate, onSelectDate, plannerData }: Weekly
         </button>
       )}
 
-      {/* Date picker */}
-      <div className="relative shrink-0">
-        <button
-          onClick={openDatePicker}
-          data-testid="button-date-picker"
-          title="Jump to date"
-          className="p-2 rounded-xl hover:bg-accent transition-colors text-muted-foreground hover:text-foreground"
-        >
-          <CalendarDays className="w-4 h-4" />
-        </button>
-        <input
-          ref={dateInputRef}
-          type="date"
-          value={format(selectedDate, "yyyy-MM-dd")}
-          onChange={handleDatePicker}
-          className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
-          style={{ zIndex: -1 }}
-          aria-label="Pick a specific date"
-        />
-      </div>
-
-      {/* Week label */}
-      <span className="hidden md:block text-[10px] text-muted-foreground font-semibold tracking-wide shrink-0 ml-1 pl-2 border-l border-border">
-        {format(weekStart, "MMM d")} – {format(addDays(weekStart, 6), "MMM d")}
-      </span>
+      <button
+        type="button"
+        onClick={onToggleSchedule}
+        data-testid="button-toggle-schedule-ribbon"
+        title={scheduleVisible ? "Hide schedule" : "Show schedule"}
+        aria-label={scheduleVisible ? "Hide schedule" : "Show schedule"}
+        aria-pressed={scheduleVisible}
+        className={cn(
+          "ml-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-colors",
+          scheduleVisible
+            ? "bg-accent text-accent-foreground hover:bg-accent/80"
+            : "text-muted-foreground hover:bg-accent hover:text-foreground",
+        )}
+      >
+        <CalendarDays className="h-3.5 w-3.5" strokeWidth={2} />
+      </button>
     </div>
   );
 }

@@ -1,14 +1,24 @@
 import { Droplets } from "lucide-react";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
+import { tasteSpringToggle, tasteTransition } from "@/lib/motion";
+import { PlannerSection } from "@/components/PlannerSection";
+import { cn } from "@/lib/utils";
 
 interface WaterTrackerProps {
   count: number;
   onChange: (count: number) => void;
-  compact?: boolean;
+  /** Match left-column sections (Brain Dump, Gratitude): heading + bordered body */
+  embedded?: boolean;
 }
 
-export function WaterTracker({ count, onChange, compact = false }: WaterTrackerProps) {
+export function WaterTracker({
+  count,
+  onChange,
+  embedded = false,
+}: WaterTrackerProps) {
   const maxGlasses = 8;
+  const reduceMotion = useReducedMotion();
+  const tapTransition = tasteTransition(reduceMotion, tasteSpringToggle);
 
   const toggleGlass = (index: number) => {
     if (index === count - 1) {
@@ -18,72 +28,79 @@ export function WaterTracker({ count, onChange, compact = false }: WaterTrackerP
     }
   };
 
-  if (compact) {
+  if (embedded) {
     return (
-      <div className="flex items-center gap-4" data-testid="water-tracker-compact">
-        <div className="flex items-center gap-1.5">
-          <Droplets className="w-3.5 h-3.5 text-primary shrink-0" />
-          <span className="text-[10px] font-bold tracking-widest uppercase text-muted-foreground">
-            Hydration
+      <PlannerSection
+        variant="default"
+        layout="standalone"
+        step={5}
+        id="hydration"
+        title="Hydration"
+        data-testid="water-tracker-embedded"
+        headerEnd={
+          <span className="type-caption font-bold tabular-nums text-muted-foreground">
+            {count}/{maxGlasses}
           </span>
-        </div>
-        <div className="flex gap-1.5">
+        }
+      >
+        <motion.div className="flex flex-wrap gap-1.5">
           {Array.from({ length: maxGlasses }).map((_, i) => (
             <motion.button
               key={i}
-              whileTap={{ scale: 0.75 }}
+              type="button"
+              whileTap={reduceMotion ? undefined : { scale: 0.88 }}
+              transition={tapTransition}
               onClick={() => toggleGlass(i)}
-              className="focus:outline-none"
+              className="rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               data-testid={`water-drop-${i}`}
               title={`${i + 1} glass${i !== 0 ? "es" : ""}`}
             >
               <Droplets
-                className="w-5 h-5 transition-all duration-300"
-                style={{
-                  color: i < count ? "hsl(var(--primary))" : "hsl(var(--border))",
-                  fill: i < count ? "hsl(var(--primary) / 0.35)" : "none",
-                  strokeWidth: 1.5,
-                }}
+                className={cn(
+                  "h-6 w-6 transition-colors duration-200 sm:h-7 sm:w-7 motion-reduce:duration-0",
+                  i < count
+                    ? "fill-surface-accent text-primary"
+                    : "text-foreground-subtle",
+                )}
+                strokeWidth={1.75}
               />
             </motion.button>
           ))}
-        </div>
-        <span className="text-xs font-bold text-muted-foreground tabular-nums">
-          {count}/{maxGlasses}
-        </span>
-      </div>
+        </motion.div>
+      </PlannerSection>
     );
   }
 
   return (
     <div
-      className="bg-card rounded-2xl p-4 md:p-6 shadow-sm border border-card-border mb-6"
+      className="mb-6 rounded-2xl border border-card-border bg-card p-4 shadow-sm md:p-6"
       data-testid="water-tracker"
     >
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-sm font-semibold uppercase tracking-widest text-primary">
+      <div className="mb-4 flex items-center justify-between">
+        <h2 className="font-sans text-sm font-semibold text-primary">
           Hydration
         </h2>
         <span className="text-xs font-medium text-muted-foreground">
           {count} / {maxGlasses}
         </span>
       </div>
-      <div className="flex justify-between items-center gap-1">
+      <div className="flex items-center justify-between gap-1">
         {Array.from({ length: maxGlasses }).map((_, i) => (
           <motion.button
             key={i}
-            whileTap={{ scale: 0.8 }}
+            type="button"
+            whileTap={reduceMotion ? undefined : { scale: 0.88 }}
+            transition={tapTransition}
             onClick={() => toggleGlass(i)}
             className="focus:outline-none"
             data-testid={`water-drop-${i}`}
           >
             <Droplets
-              className="w-6 h-6 md:w-8 md:h-8 transition-colors duration-500"
-              style={{
-                fill: i < count ? "hsl(var(--primary))" : "transparent",
-                color: i < count ? "hsl(var(--primary))" : "hsl(var(--muted))",
-                strokeWidth: 1.5,
-              }}
+              className={cn(
+                "h-6 w-6 transition-colors duration-500 md:h-8 md:w-8",
+                i < count ? "fill-surface-accent text-primary" : "text-foreground-subtle",
+              )}
+              strokeWidth={1.5}
             />
           </motion.button>
         ))}

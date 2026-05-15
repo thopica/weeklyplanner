@@ -1,11 +1,149 @@
 import { format } from 'date-fns';
-import { PlannerData, DayData, defaultDayData } from './types';
+import { PlannerData, DayData, defaultDayData, TimeBlock } from './types';
+import {
+  type DayScheduleRange,
+  clampBlockDuration,
+  clampBlockStart,
+  clampDayScheduleRange,
+  normalizeBlocksToRange,
+  OUTLOOK_DEFAULT_DAY_RANGE,
+  SLOT_MINUTES,
+} from './schedule';
+
+function isLegacyHourBlock(
+  b: unknown,
+): b is { id: string; hour: number; label: string } {
+  return (
+    typeof b === 'object' &&
+    b !== null &&
+    'hour' in b &&
+    !('startMinute' in b)
+  );
+}
+
+function migrateTimeBlocks(
+  blocks: unknown[],
+  range: DayScheduleRange,
+): TimeBlock[] {
+  if (!Array.isArray(blocks) || blocks.length === 0) return [];
+  if (isLegacyHourBlock(blocks[0])) {
+    return (blocks as Array<{ id: string; hour: number; label: string }>).map(
+      (old) => ({
+        id: old.id,
+        startMinute: clampBlockStart(old.hour * 60, range),
+        durationMinutes: clampBlockDuration(
+          clampBlockStart(old.hour * 60, range),
+          60,
+          range,
+        ),
+        label: old.label ?? '',
+      }),
+    );
+  }
+  return (blocks as TimeBlock[]).map((b) => {
+    const sm = Number(b.startMinute);
+    const dm = Number(b.durationMinutes);
+    const startBase = Number.isFinite(sm) ? sm : range.startMin;
+    const cs = clampBlockStart(startBase, range);
+    return {
+      id: b.id,
+      label: typeof b.label === "string" ? b.label : "",
+      startMinute: cs,
+      durationMinutes: clampBlockDuration(
+        cs,
+        Number.isFinite(dm) && dm >= SLOT_MINUTES ? dm : SLOT_MINUTES,
+        range,
+      ),
+    };
+  });
+}
 
 export const STORAGE_KEYS = {
   PLANNER_DATA: 'weeklyPlanner_data',
   THEME: 'weeklyPlanner_theme',
   SELECTED_DATE: 'weeklyPlanner_selectedDate',
+  SCHEDULE_RANGE: 'weeklyPlanner_scheduleRange',
+  SCHEDULE_VISIBLE: 'weeklyPlanner_scheduleVisible',
+  SCHEDULE_PANE_WIDTH: 'weeklyPlanner_schedulePaneWidth',
 };
+
+export const SCHEDULE_PANE_WIDTH_DEFAULT = 312;
+export const SCHEDULE_PANE_WIDTH_MIN = 200;
+export const SCHEDULE_PANE_WIDTH_MAX = 560;
+
+export function clampSchedulePaneWidth(width: number): number {
+  if (!Number.isFinite(width)) return SCHEDULE_PANE_WIDTH_DEFAULT;
+  return Math.round(
+    Math.min(SCHEDULE_PANE_WIDTH_MAX, Math.max(SCHEDULE_PANE_WIDTH_MIN, width)),
+  );
+}
+
+export function getSchedulePaneWidth(): number {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.SCHEDULE_PANE_WIDTH);
+    if (!raw) return SCHEDULE_PANE_WIDTH_DEFAULT;
+    return clampSchedulePaneWidth(Number(raw));
+  } catch {
+    return SCHEDULE_PANE_WIDTH_DEFAULT;
+  }
+}
+
+export function saveSchedulePaneWidth(width: number): void {
+  localStorage.setItem(
+    STORAGE_KEYS.SCHEDULE_PANE_WIDTH,
+    String(clampSchedulePaneWidth(width)),
+  );
+}
+
+export function getScheduleVisible(): boolean {
+  try {
+    const v = localStorage.getItem(STORAGE_KEYS.SCHEDULE_VISIBLE);
+    return v !== 'false';
+  } catch {
+    return true;
+  }
+}
+
+export function saveScheduleVisible(visible: boolean): void {
+  localStorage.setItem(STORAGE_KEYS.SCHEDULE_VISIBLE, String(visible));
+}
+
+export function getScheduleRange(): DayScheduleRange {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.SCHEDULE_RANGE);
+    if (!raw) return { ...OUTLOOK_DEFAULT_DAY_RANGE };
+    const p = JSON.parse(raw) as { startMin?: unknown; endMin?: unknown };
+    if (typeof p.startMin === 'number' && typeof p.endMin === 'number') {
+      return clampDayScheduleRange({ startMin: p.startMin, endMin: p.endMin });
+    }
+  } catch {
+    /* ignore */
+  }
+  return { ...OUTLOOK_DEFAULT_DAY_RANGE };
+}
+
+/** Persist calendar visible hours and optionally clip all time blocks into the new range. */
+export function saveScheduleRange(
+  range: DayScheduleRange,
+  options: { normalizePlannerData?: boolean } = {},
+): void {
+  const r = clampDayScheduleRange(range);
+  localStorage.setItem(STORAGE_KEYS.SCHEDULE_RANGE, JSON.stringify(r));
+
+  if (options.normalizePlannerData) {
+    const data = getPlannerData();
+    for (const dateStr of Object.keys(data.days)) {
+      const day = data.days[dateStr];
+      if (!day || !Array.isArray(day.timeBlocks)) continue;
+      const migrated = migrateTimeBlocks(day.timeBlocks, r);
+      data.days[dateStr] = {
+        ...day,
+        timeBlocks: normalizeBlocksToRange(migrated, r),
+      };
+    }
+    savePlannerData(data);
+  }
+}
 
 export function getPlannerData(): PlannerData {
   try {
@@ -23,7 +161,32 @@ export function savePlannerData(data: PlannerData): void {
 
 export function getDayData(dateStr: string): DayData {
   const data = getPlannerData();
-  return data.days[dateStr] || structuredClone(defaultDayData);
+  const raw = data.days[dateStr];
+  if (!raw) return structuredClone(defaultDayData);
+
+  const range = getScheduleRange();
+
+  const needsLegacyMigration =
+    Array.isArray(raw.timeBlocks) &&
+    raw.timeBlocks.length > 0 &&
+    isLegacyHourBlock(raw.timeBlocks[0]);
+
+  const migrated = migrateTimeBlocks(raw.timeBlocks ?? [], range);
+  const timeBlocks = normalizeBlocksToRange(migrated, range);
+
+  const merged: DayData = {
+    ...structuredClone(defaultDayData),
+    ...raw,
+    mainFocusCompleted: raw.mainFocusCompleted ?? false,
+    timeBlocks,
+  };
+
+  if (needsLegacyMigration) {
+    data.days[dateStr] = merged;
+    savePlannerData(data);
+  }
+
+  return merged;
 }
 
 export function saveDayData(dateStr: string, dayData: DayData): void {
@@ -62,6 +225,7 @@ export function loadDemoData(dateStr: string): void {
   const data = getPlannerData();
   data.days[dateStr] = {
     mainFocus: "Finish the creative brief for client project",
+    mainFocusCompleted: false,
     highPriorityTasks: [
       { id: "hp1", text: "Draft proposal outline", completed: true, createdAt: new Date().toISOString() },
       { id: "hp2", text: "Review feedback with team", completed: false, createdAt: new Date().toISOString() },
@@ -74,16 +238,13 @@ export function loadDemoData(dateStr: string): void {
       { id: "g4", text: "Schedule dentist appointment", completed: false, createdAt: new Date().toISOString() },
       { id: "g5", text: "Clean inbox", completed: false, createdAt: new Date().toISOString() },
     ],
-    timeBlocks: Array.from({ length: 17 }, (_, i) => ({
-      id: `block-${i + 6}`,
-      hour: i + 6,
-      label:
-        i + 6 === 8 ? "Morning Routine & Coffee" :
-        i + 6 === 10 ? "Deep Work: Proposal" :
-        i + 6 === 13 ? "Lunch Break" :
-        i + 6 === 15 ? "Team Check-in" :
-        i + 6 === 19 ? "Evening Wind Down" : "",
-    })),
+    timeBlocks: [
+      { id: "demo-1", startMinute: 8 * 60, durationMinutes: 90, label: "Morning routine & coffee" },
+      { id: "demo-2", startMinute: 10 * 60, durationMinutes: 120, label: "Deep work: proposal" },
+      { id: "demo-3", startMinute: 13 * 60, durationMinutes: 60, label: "Lunch break" },
+      { id: "demo-4", startMinute: 14 * 60 + 30, durationMinutes: 30, label: "Team check-in" },
+      { id: "demo-5", startMinute: 15 * 60, durationMinutes: 120, label: "Afternoon focus" },
+    ],
     waterGlasses: 3,
     meals: { breakfast: "Oatmeal with berries", lunch: "Salad bowl", dinner: "Pasta" },
     gratitude: ["Sunshine today", "Good coffee", "Finishing a big task"],
@@ -94,4 +255,5 @@ export function loadDemoData(dateStr: string): void {
 
 export function clearAllData(): void {
   localStorage.removeItem(STORAGE_KEYS.PLANNER_DATA);
+  localStorage.removeItem(STORAGE_KEYS.SCHEDULE_RANGE);
 }

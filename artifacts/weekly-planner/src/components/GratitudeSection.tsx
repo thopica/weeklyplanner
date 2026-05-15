@@ -1,3 +1,5 @@
+import { PlannerSection } from "@/components/PlannerSection";
+
 interface GratitudeSectionProps {
   items: string[];
   onChange: (items: string[]) => void;
@@ -11,24 +13,18 @@ export function GratitudeSection({ items, onChange }: GratitudeSectionProps) {
   };
 
   return (
-    <div className="mb-8" data-testid="gratitude-section">
-      <h2
-        className="text-[10px] font-bold uppercase tracking-widest mb-1"
-        style={{ color: "hsl(var(--primary))" }}
-      >
-        Gratitude
-      </h2>
-      <p className="text-xs text-muted-foreground mb-4 italic" style={{ fontFamily: "'Lora', Georgia, serif" }}>
-        Today I am grateful for…
-      </p>
-
+    <PlannerSection
+      variant="default"
+      layout="standalone"
+      step={3}
+      id="gratitude"
+      title="Gratitude"
+      data-testid="gratitude-section"
+    >
       <div className="space-y-2">
         {items.map((item, i) => (
           <div key={i} className="flex items-center gap-3">
-            <span
-              className="text-xs font-bold tabular-nums shrink-0"
-              style={{ color: "hsl(var(--primary) / 0.45)" }}
-            >
+            <span className="type-caption shrink-0 font-bold tabular-nums text-primary">
               {i + 1}.
             </span>
             <input
@@ -37,21 +33,11 @@ export function GratitudeSection({ items, onChange }: GratitudeSectionProps) {
               onChange={(e) => updateItem(i, e.target.value)}
               placeholder="Something good today…"
               data-testid={`gratitude-input-${i}`}
-              className="flex-1 bg-transparent border-b py-1.5 text-sm focus:outline-none transition-colors"
-              style={{
-                borderColor: item ? "hsl(var(--primary) / 0.3)" : "hsl(var(--border))",
-                color: "hsl(var(--foreground))",
-              }}
-              onFocus={(e) => (e.target.style.borderColor = "hsl(var(--primary) / 0.6)")}
-              onBlur={(e) =>
-                (e.target.style.borderColor = item
-                  ? "hsl(var(--primary) / 0.3)"
-                  : "hsl(var(--border))")
-              }
+              className="type-ui flex-1 border-b border-border bg-transparent py-1.5 text-foreground transition-colors focus:border-primary focus:outline-none"
             />
           </div>
         ))}
       </div>
-    </div>
+    </PlannerSection>
   );
 }

@@ -7,7 +7,10 @@ export interface Task {
 
 export interface TimeBlock {
   id: string;
-  hour: number; // 6-22
+  /** Minutes from midnight; aligned to 30-minute grid (e.g. 6:00 AM = 360). */
+  startMinute: number;
+  /** Length in minutes; at least 30, in 30-minute steps. */
+  durationMinutes: number;
   label: string;
 }
 
@@ -32,11 +35,7 @@ export const defaultDayData: DayData = {
   mainFocusCompleted: false,
   highPriorityTasks: [],
   generalTasks: [],
-  timeBlocks: Array.from({ length: 17 }, (_, i) => ({
-    id: `block-${i + 6}`,
-    hour: i + 6,
-    label: '',
-  })),
+  timeBlocks: [],
   waterGlasses: 0,
   meals: { breakfast: '', lunch: '', dinner: '' },
   gratitude: ['', '', ''],

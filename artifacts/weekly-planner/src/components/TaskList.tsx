@@ -3,7 +3,10 @@ import { Task } from "@/lib/types";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { Trash2, Plus } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
+import { tasteSpringLayout, tasteTransition } from "@/lib/motion";
+import { PlannerSection } from "@/components/PlannerSection";
+import { cn } from "@/lib/utils";
 
 interface TaskListProps {
   title: string;
@@ -14,6 +17,8 @@ interface TaskListProps {
 
 export function TaskList({ title, tasks, onChange, accentColor = "primary" }: TaskListProps) {
   const [newTaskText, setNewTaskText] = useState("");
+  const reduceMotion = useReducedMotion();
+  const listTransition = tasteTransition(reduceMotion, tasteSpringLayout);
 
   const handleAddTask = (e?: React.FormEvent) => {
     e?.preventDefault();
@@ -30,7 +35,6 @@ export function TaskList({ title, tasks, onChange, accentColor = "primary" }: Ta
 
   const toggleTask = (id: string) => {
     const updated = tasks.map((t) => (t.id === id ? { ...t, completed: !t.completed } : t));
-    // Completed tasks sink to the bottom, preserving relative order within each group
     const incomplete = updated.filter((t) => !t.completed);
     const complete = updated.filter((t) => t.completed);
     onChange([...incomplete, ...complete]);
@@ -40,68 +44,62 @@ export function TaskList({ title, tasks, onChange, accentColor = "primary" }: Ta
     onChange(tasks.filter((t) => t.id !== id));
   };
 
+  const requestDeleteTask = (task: Task) => {
+    const label = task.text.trim();
+    const prompt = label
+      ? `Remove "${label.length > 48 ? `${label.slice(0, 48)}…` : label}"?`
+      : "Remove this task?";
+    if (!window.confirm(prompt)) return;
+    deleteTask(task.id);
+  };
+
   const updateTaskText = (id: string, text: string) => {
     onChange(tasks.map((t) => (t.id === id ? { ...t, text } : t)));
   };
 
-  // Use inline style so the color survives Tailwind's purge
-  const accentStyle =
-    accentColor === "primary"
-      ? { color: "hsl(var(--primary))" }
-      : { color: "hsl(var(--secondary))" };
-
-  const remainingCount = tasks.filter((t) => !t.completed).length;
-
   return (
-    <div className="mb-8" data-testid={`task-list-${accentColor}`}>
-      <div className="flex items-center justify-between mb-4">
-        <h2
-          className="text-[10px] font-bold uppercase tracking-widest"
-          style={accentStyle}
-        >
-          {title}
-        </h2>
-        {tasks.length > 0 && (
-          <span className="text-[10px] font-semibold text-muted-foreground">
-            {remainingCount} remaining
-          </span>
-        )}
-      </div>
-
-      <div className="space-y-2 mb-3">
+    <PlannerSection
+      variant="default"
+      layout="standalone"
+      step={2}
+      id="tasks"
+      title={title}
+      description="Short, concrete tasks that support your focus."
+      data-testid={`task-list-${accentColor}`}
+    >
+      <div className="overflow-hidden rounded-lg border border-border bg-surface-subtle">
         <AnimatePresence mode="popLayout">
           {tasks.length === 0 && (
             <motion.p
               key="empty"
-              initial={{ opacity: 0 }}
+              initial={reduceMotion ? false : { opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="text-sm text-muted-foreground italic py-2"
+              transition={listTransition}
+              className="type-ui px-3 py-4 text-muted-foreground"
             >
-              No tasks yet. Take a deep breath.
+              Nothing here yet. Add what matters for today.
             </motion.p>
           )}
-          {tasks.map((task) => (
+          {tasks.map((task, index) => (
             <motion.div
               layout
               key={task.id}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: task.completed ? 0.55 : 1, y: 0 }}
-              exit={{ opacity: 0, x: -16 }}
-              transition={{ duration: 0.2 }}
-              className={`group flex items-center gap-3 px-3 py-2.5 rounded-xl border transition-all duration-300 ${
-                task.completed
-                  ? "border-transparent bg-transparent"
-                  : "bg-card border-card-border shadow-sm hover:shadow"
-              }`}
+              initial={reduceMotion ? false : { opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={reduceMotion ? { opacity: 0 } : { opacity: 0, x: -8 }}
+              transition={listTransition}
+              className={cn(
+                "group flex items-center gap-3 px-3 py-2.5",
+                index > 0 && "border-t border-border-strong",
+              )}
               data-testid={`task-item-${task.id}`}
             >
               <Checkbox
                 checked={task.completed}
                 onCheckedChange={() => toggleTask(task.id)}
                 data-testid={`task-checkbox-${task.id}`}
-                className="w-5 h-5 rounded-full border-2 shrink-0"
-                style={task.completed ? {} : { borderColor: "hsl(var(--border))" }}
+                className="h-5 w-5 shrink-0 rounded-full border-2 border-border"
               />
               <input
                 type="text"
@@ -109,51 +107,49 @@ export function TaskList({ title, tasks, onChange, accentColor = "primary" }: Ta
                 onChange={(e) => updateTaskText(task.id, e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
                 data-testid={`task-input-${task.id}`}
-                className="flex-1 bg-transparent border-none text-sm focus:outline-none transition-all duration-300 min-w-0"
-                style={{
-                  textDecoration: task.completed ? "line-through" : "none",
-                  color: task.completed
-                    ? "hsl(var(--muted-foreground))"
-                    : "hsl(var(--foreground))",
-                }}
+                className={cn(
+                  "type-ui min-w-0 flex-1 border-none bg-transparent focus:outline-none",
+                  task.completed
+                    ? "font-medium text-foreground-subtle line-through"
+                    : "text-foreground",
+                )}
               />
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={() => deleteTask(task.id)}
+                onClick={() => requestDeleteTask(task)}
                 data-testid={`task-delete-${task.id}`}
-                className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-opacity h-7 w-7 shrink-0"
+                aria-label={task.text.trim() ? `Remove task: ${task.text}` : "Remove task"}
+                className="h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive"
               >
-                <Trash2 className="w-3.5 h-3.5" />
+                <Trash2 className="h-3.5 w-3.5" strokeWidth={2} />
               </Button>
             </motion.div>
           ))}
         </AnimatePresence>
-      </div>
 
-      {/* Add task form */}
-      <form onSubmit={handleAddTask} className="flex gap-2">
-        <input
-          type="text"
-          value={newTaskText}
-          onChange={(e) => setNewTaskText(e.target.value)}
-          placeholder="Add a new task..."
-          data-testid={`input-new-task-${accentColor}`}
-          className="flex-1 px-4 py-2.5 rounded-xl text-sm bg-card border border-card-border focus:outline-none focus:ring-2 transition-all min-w-0"
-          style={{ "--tw-ring-color": "hsl(var(--primary) / 0.2)" } as React.CSSProperties}
-        />
-        <button
-          type="submit"
-          data-testid={`button-add-task-${accentColor}`}
-          className="shrink-0 w-10 h-10 rounded-xl flex items-center justify-center transition-all"
-          style={{
-            background: "hsl(var(--secondary))",
-            color: "hsl(var(--secondary-foreground))",
-          }}
+        <form
+          onSubmit={handleAddTask}
+          className="flex gap-2 border-t border-border-strong bg-card px-3 py-2.5"
         >
-          <Plus className="w-4 h-4" />
-        </button>
-      </form>
-    </div>
+          <input
+            type="text"
+            value={newTaskText}
+            onChange={(e) => setNewTaskText(e.target.value)}
+            placeholder="Add a task…"
+            data-testid={`input-new-task-${accentColor}`}
+            className="type-ui min-w-0 flex-1 rounded-md border border-border bg-background px-3 py-2 focus:outline-none focus:ring-2 focus:ring-ring motion-reduce:transition-none"
+          />
+          <Button
+            type="submit"
+            size="icon"
+            data-testid={`button-add-task-${accentColor}`}
+            className="h-9 w-9 shrink-0 bg-secondary text-secondary-foreground hover:bg-secondary/90"
+          >
+            <Plus className="h-4 w-4" strokeWidth={2} />
+          </Button>
+        </form>
+      </div>
+    </PlannerSection>
   );
 }
