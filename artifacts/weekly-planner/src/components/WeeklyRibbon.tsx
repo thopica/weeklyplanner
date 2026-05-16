@@ -72,26 +72,19 @@ export function WeeklyRibbon({
               type="button"
               data-testid={`day-button-${dateStr}`}
               onClick={() => onSelectDate(dateStr)}
-              className="flex min-h-[34px] min-w-[40px] flex-1 flex-col items-center justify-center gap-0.5 rounded-lg px-1 py-1 font-sans transition-colors"
-              style={{
-                background: isSelected
-                  ? "hsl(var(--primary))"
-                  : isToday
-                    ? "hsl(var(--accent))"
-                    : "transparent",
-                color: isSelected
-                  ? "hsl(var(--primary-foreground))"
-                  : isToday
-                    ? "hsl(var(--accent-foreground))"
-                    : "hsl(var(--muted-foreground))",
-                outline: isToday && !isSelected ? "2px solid hsl(var(--primary))" : "none",
-                outlineOffset: "-2px",
-              }}
+              className={cn(
+                "flex min-h-[34px] min-w-[40px] flex-1 flex-col items-center justify-center gap-0.5 rounded-lg px-1 py-1 font-sans transition-colors",
+                isSelected && "bg-primary text-primary-foreground",
+                !isSelected &&
+                  isToday &&
+                  "bg-accent text-accent-foreground ring-2 ring-inset ring-primary",
+                !isSelected && !isToday && "text-muted-foreground",
+              )}
             >
               <span className="type-label leading-none">
                 {format(date, "EEE")}
               </span>
-              <span className="font-serif text-lead font-bold leading-none tabular-nums">
+              <span className="text-lead font-bold leading-none tabular-nums">
                 {format(date, "d")}
               </span>
               <IncompleteDayIndicator
@@ -123,11 +116,7 @@ export function WeeklyRibbon({
           onClick={goToToday}
           data-testid="button-go-today"
           title="Go to today"
-          className="type-label ml-0.5 shrink-0 rounded-lg px-2.5 py-1.5"
-          style={{
-            background: "hsl(var(--primary))",
-            color: "hsl(var(--primary-foreground))",
-          }}
+          className="type-label ml-0.5 shrink-0 rounded-lg bg-primary px-2.5 py-1.5 text-primary-foreground"
         >
           Today
         </button>

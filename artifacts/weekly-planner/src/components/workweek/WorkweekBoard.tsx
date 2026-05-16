@@ -47,7 +47,12 @@ export function WorkweekBoard({ anchorDateStr, range, onOpenDay }: WorkweekBoard
                 WEEK_SCHEDULE_SURFACE_CLASS,
               )}
             >
-              <ScheduleTimeRail range={range} granularity="hour" compact />
+              <ScheduleTimeRail
+                range={range}
+                granularity="hour"
+                compact
+                className="border-r-0"
+              />
             </div>
           </div>
 

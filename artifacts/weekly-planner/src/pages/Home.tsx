@@ -25,6 +25,7 @@ import { TimeBlockSchedule } from "@/components/TimeBlockSchedule";
 import { HabitsSection } from "@/components/HabitsSection";
 import { GratitudeSection } from "@/components/GratitudeSection";
 import { BrainDump } from "@/components/BrainDump";
+import { HomePageSkeleton } from "@/components/HomePageSkeleton";
 import { SchedulePaneResizeHandle } from "@/components/SchedulePaneResizeHandle";
 import { useSchedulePaneResize } from "@/hooks/use-schedule-pane-resize";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
@@ -38,7 +39,7 @@ export default function Home() {
   const [location] = useLocation();
   const reduceMotion = useReducedMotion();
   const [selectedDateStr, setSelectedDateStr] = useState<string>(getSelectedDate());
-  const [dayData, setDayData] = useState<DayData | null>(null);
+  const [dayData, setDayData] = useState<DayData | null>(() => getDayData(getSelectedDate()));
   const [plannerData, setPlannerData] = useState<PlannerData>(getPlannerData());
   const [scheduleRange, setScheduleRange] = useState(() => getScheduleRange());
   const [scheduleVisible, setScheduleVisible] = useState(() => getScheduleVisible());
@@ -47,8 +48,8 @@ export default function Home() {
   const saveStatusTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [saveStatus, setSaveStatus] = useState<"idle" | "saved">("idle");
 
-  const loadData = () => {
-    setDayData(getDayData(selectedDateStr));
+  const loadData = (dateStr: string = selectedDateStr) => {
+    setDayData(getDayData(dateStr));
     setPlannerData(getPlannerData());
     setScheduleRange(getScheduleRange());
     setHabits(getHabits());
@@ -56,14 +57,14 @@ export default function Home() {
 
   useEffect(() => {
     saveSelectedDate(selectedDateStr);
-    loadData();
+    loadData(selectedDateStr);
   }, [selectedDateStr]);
 
   useEffect(() => {
-    if (location === "/") {
-      setSelectedDateStr(getSelectedDate());
-      loadData();
-    }
+    if (location !== "/") return;
+    const dateStr = getSelectedDate();
+    setSelectedDateStr(dateStr);
+    loadData(dateStr);
   }, [location]);
 
   useEffect(() => {
@@ -95,8 +96,6 @@ export default function Home() {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, []);
 
-  if (!dayData) return null;
-
   const handleDataChange = (newData: DayData) => {
     setDayData(newData);
     saveDayData(selectedDateStr, newData);
@@ -115,7 +114,14 @@ export default function Home() {
   const handleMoveTask = (taskId: string, toDateStr: string) => {
     const data = getPlannerData();
     const next = moveTaskBetweenDays(data, taskId, selectedDateStr, toDateStr);
-    if (!next) return;
+    if (!next) {
+      toast({
+        title: "Could not move task",
+        description: "The task may already exist on that day.",
+        variant: "destructive",
+      });
+      return;
+    }
     savePlannerData(next);
     setPlannerData(next);
     setDayData(getDayData(selectedDateStr));
@@ -126,7 +132,27 @@ export default function Home() {
   };
 
   const selectedDate = parseISO(`${selectedDateStr}T12:00:00`);
-  const allTasks = mergeDayTasks(dayData);
+  const allTasks = dayData ? mergeDayTasks(dayData) : [];
+
+  const sectionStaggerParent = reduceMotion
+    ? undefined
+    : {
+        hidden: {},
+        show: {
+          transition: { staggerChildren: 0.06, delayChildren: 0.02 },
+        },
+      };
+
+  const sectionStaggerChild = reduceMotion
+    ? undefined
+    : {
+        hidden: { opacity: 0, y: 6 },
+        show: {
+          opacity: 1,
+          y: 0,
+          transition: tasteSpringContent,
+        },
+      };
 
   const showSchedule = () => {
     if (!scheduleVisible) toggleScheduleVisible();
@@ -139,7 +165,7 @@ export default function Home() {
     >
       <a
         href="#main-content"
-        className="absolute left-3 top-0 z-100 -translate-y-20 rounded-lg bg-foreground px-4 py-2.5 type-ui font-medium text-background shadow-lg transition focus:translate-y-3 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background"
+        className="absolute left-3 top-0 z-[100] -translate-y-20 rounded-lg bg-foreground px-4 py-2.5 type-ui font-medium text-background shadow-lg transition focus:translate-y-3 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background"
       >
         Skip to planner
       </a>
@@ -189,53 +215,72 @@ export default function Home() {
                   "max-lg:overflow-visible",
                   "lg:scrollbar-hide lg:h-full lg:overflow-y-auto",
                 )}
+                variants={sectionStaggerParent}
+                initial={reduceMotion ? false : "hidden"}
+                animate={reduceMotion ? undefined : "show"}
               >
-                <MainFocusSection
-                  focus={dayData.mainFocus}
-                  completed={dayData.mainFocusCompleted ?? false}
-                  onChange={(focus) => handleDataChange({ ...dayData, mainFocus: focus })}
-                  onToggle={() =>
-                    handleDataChange({
-                      ...dayData,
-                      mainFocusCompleted: !dayData.mainFocusCompleted,
-                    })
-                  }
-                  scheduleVisible={scheduleVisible}
-                  onShowSchedule={showSchedule}
-                />
-                <TaskList
-                  title="Today's tasks"
-                  tasks={allTasks}
-                  sourceDateStr={selectedDateStr}
-                  onMoveTask={handleMoveTask}
-                  onChange={(tasks) =>
-                    handleDataChange({
-                      ...dayData,
-                      ...partitionDayTasks(tasks, dayData),
-                    })
-                  }
-                  accentColor="primary"
-                />
-                <GratitudeSection
-                  items={dayData.gratitude}
-                  onChange={(items) => handleDataChange({ ...dayData, gratitude: items })}
-                />
-                <BrainDump
-                  text={dayData.brainDump}
-                  onChange={(text) => handleDataChange({ ...dayData, brainDump: text })}
-                />
-                <HabitsSection
-                  habits={habits}
-                  logs={dayData.habitLogs ?? {}}
-                  onChange={(habitLogs) =>
-                    handleDataChange({ ...dayData, habitLogs })
-                  }
-                />
+                {!dayData ? (
+                  <HomePageSkeleton />
+                ) : (
+                  <>
+                    <motion.div variants={sectionStaggerChild}>
+                      <MainFocusSection
+                        focus={dayData.mainFocus}
+                        completed={dayData.mainFocusCompleted ?? false}
+                        onChange={(focus) => handleDataChange({ ...dayData, mainFocus: focus })}
+                        onToggle={() =>
+                          handleDataChange({
+                            ...dayData,
+                            mainFocusCompleted: !dayData.mainFocusCompleted,
+                          })
+                        }
+                        scheduleVisible={scheduleVisible}
+                        onShowSchedule={showSchedule}
+                      />
+                    </motion.div>
+                    <motion.div variants={sectionStaggerChild}>
+                      <TaskList
+                        title="Today's tasks"
+                        tasks={allTasks}
+                        sourceDateStr={selectedDateStr}
+                        onMoveTask={handleMoveTask}
+                        onChange={(tasks) =>
+                          handleDataChange({
+                            ...dayData,
+                            ...partitionDayTasks(tasks, dayData),
+                          })
+                        }
+                        accentColor="primary"
+                      />
+                    </motion.div>
+                    <motion.div variants={sectionStaggerChild}>
+                      <GratitudeSection
+                        items={dayData.gratitude}
+                        onChange={(items) => handleDataChange({ ...dayData, gratitude: items })}
+                      />
+                    </motion.div>
+                    <motion.div variants={sectionStaggerChild}>
+                      <BrainDump
+                        text={dayData.brainDump}
+                        onChange={(text) => handleDataChange({ ...dayData, brainDump: text })}
+                      />
+                    </motion.div>
+                    <motion.div variants={sectionStaggerChild}>
+                      <HabitsSection
+                        habits={habits}
+                        logs={dayData.habitLogs ?? {}}
+                        onChange={(habitLogs) =>
+                          handleDataChange({ ...dayData, habitLogs })
+                        }
+                      />
+                    </motion.div>
+                  </>
+                )}
               </motion.div>
             </motion.div>
 
             <AnimatePresence initial={false}>
-              {scheduleVisible && (
+              {scheduleVisible && dayData && (
                 <>
                   <SchedulePaneResizeHandle
                     {...resizeHandleProps}

@@ -92,7 +92,7 @@ export function WorkweekDayColumn({
         <div className="flex items-center gap-2">
           <span
             className={cn(
-              "font-serif text-lead font-semibold tabular-nums tracking-tight",
+              "text-lead font-semibold tabular-nums tracking-tight",
               isToday ? "text-primary-foreground" : "text-foreground",
             )}
           >

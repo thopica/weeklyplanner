@@ -21,7 +21,7 @@ function SummaryCard({
       data-testid={testId}
     >
       <p className="type-label text-muted-foreground">{label}</p>
-      <p className="mt-1 font-serif text-title font-semibold tabular-nums text-foreground">
+      <p className="mt-1 text-title font-semibold tabular-nums text-foreground">
         {value}
       </p>
       {hint ? <p className="type-caption mt-1 text-muted-foreground">{hint}</p> : null}

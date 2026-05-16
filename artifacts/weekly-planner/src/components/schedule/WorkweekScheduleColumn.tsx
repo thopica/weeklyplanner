@@ -15,7 +15,7 @@ export function WorkweekScheduleColumn({ blocks, range }: WorkweekScheduleColumn
     <ScheduleSlotGrid
       range={range}
       granularity="hour"
-      className="border-l border-border bg-transparent"
+      className="bg-transparent"
     >
       {sorted.map((block) => (
         <ScheduleBlockChip

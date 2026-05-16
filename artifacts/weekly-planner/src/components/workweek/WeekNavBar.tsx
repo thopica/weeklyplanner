@@ -48,11 +48,7 @@ export function WeekNavBar({ selectedDate, onAnchorChange }: WeekNavBarProps) {
           onClick={() => onAnchorChange(todayStr)}
           data-testid="button-go-today"
           title="Go to today"
-          className="type-label ml-0.5 shrink-0 rounded-lg px-2.5 py-1.5"
-          style={{
-            background: "hsl(var(--primary))",
-            color: "hsl(var(--primary-foreground))",
-          }}
+          className="type-label ml-0.5 shrink-0 rounded-lg bg-primary px-2.5 py-1.5 text-primary-foreground"
         >
           Today
         </button>

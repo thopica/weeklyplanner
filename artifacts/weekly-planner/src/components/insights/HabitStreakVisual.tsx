@@ -8,7 +8,7 @@ interface HabitStreakVisualProps {
   timeline: HabitDayStatus[];
 }
 
-const doneCellClass = "bg-secondary ring-1 ring-secondary/40";
+const doneCellClass = "bg-habit-done ring-1 ring-habit-done/40";
 
 export function HabitStreakVisual({
   habitName,

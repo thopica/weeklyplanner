@@ -1,3 +1,4 @@
+import { Check } from "lucide-react";
 import type { DayTaskSummary } from "@/lib/tasks";
 import { cn } from "@/lib/utils";
 
@@ -29,17 +30,22 @@ export function IncompleteDayIndicator({
     return (
       <span
         className={cn(
-          variant === "ribbon"
-            ? "type-caption font-bold leading-none"
-            : "type-caption font-semibold leading-none",
-          isSelected && variant === "ribbon"
-            ? "text-primary-foreground/75"
-            : "text-secondary",
+          "flex items-center justify-center",
+          variant === "ribbon" ? "h-1.5 w-full" : "shrink-0",
           className,
         )}
         aria-label={ariaLabel}
       >
-        ✓
+        <Check
+          className={cn(
+            "h-2.5 w-2.5 shrink-0",
+            isSelected && variant === "ribbon"
+              ? "text-primary-foreground/75"
+              : "text-secondary",
+          )}
+          strokeWidth={2.5}
+          aria-hidden
+        />
       </span>
     );
   }

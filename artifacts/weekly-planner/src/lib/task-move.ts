@@ -14,13 +14,19 @@ function removeTaskById(day: DayData, taskId: string): DayData {
   };
 }
 
-function appendToGeneralTasks(day: DayData, task: Task): DayData {
+function appendTask(day: DayData, task: Task, bucket: "highPriority" | "general"): DayData {
   const existingIds = new Set(mergeDayTasks(day).map((t) => t.id));
   if (existingIds.has(task.id)) return day;
-  return {
-    ...day,
-    generalTasks: [...day.generalTasks, task],
-  };
+
+  if (bucket === "highPriority") {
+    return { ...day, highPriorityTasks: [...day.highPriorityTasks, task] };
+  }
+  return { ...day, generalTasks: [...day.generalTasks, task] };
+}
+
+function bucketForTask(day: DayData, taskId: string): "highPriority" | "general" {
+  const inHighPriority = day.highPriorityTasks.some((t) => t.id === taskId);
+  return inHighPriority ? "highPriority" : "general";
 }
 
 /**
@@ -40,13 +46,19 @@ export function moveTaskBetweenDays(
   const task = mergeDayTasks(fromDay).find((t) => t.id === taskId);
   if (!task) return null;
 
+  const targetDay = cloneDay(data.days[toDateStr]);
+  const targetIds = new Set(mergeDayTasks(targetDay).map((t) => t.id));
+  if (targetIds.has(taskId)) return null;
+
+  const bucket = bucketForTask(fromDay, taskId);
+
   const next: PlannerData = {
     ...data,
     days: { ...data.days },
   };
 
   next.days[fromDateStr] = removeTaskById(cloneDay(fromDay), taskId);
-  next.days[toDateStr] = appendToGeneralTasks(cloneDay(next.days[toDateStr]), task);
+  next.days[toDateStr] = appendTask(targetDay, task, bucket);
 
   return next;
 }

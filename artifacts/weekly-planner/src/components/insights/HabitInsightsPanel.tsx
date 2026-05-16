@@ -21,8 +21,8 @@ function HabitCard({ row }: { row: HabitInsightRow }) {
           <p className="type-label text-muted-foreground">Current streak</p>
           <p
             className={cn(
-              "mt-0.5 font-serif text-display font-semibold leading-none tabular-nums",
-              row.currentStreak > 0 ? "text-secondary" : "text-muted-foreground",
+              "mt-0.5 text-display font-semibold leading-none tabular-nums",
+              row.currentStreak > 0 ? "text-habit-done" : "text-muted-foreground",
             )}
             aria-label={`${row.currentStreak} day streak`}
           >

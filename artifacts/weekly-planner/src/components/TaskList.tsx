@@ -109,7 +109,6 @@ export function TaskList({
       step={2}
       id="tasks"
       title={title}
-      description="Short, concrete tasks that support your focus."
       data-testid={`task-list-${accentColor}`}
       headerEnd={
         openCount > 0 ? (
