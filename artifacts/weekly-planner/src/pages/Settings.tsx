@@ -5,6 +5,7 @@ import { ThemeSettings } from "@/components/ThemeSettings";
 import { CalendarHoursSettings } from "@/components/CalendarHoursSettings";
 import { HabitsSettings } from "@/components/HabitsSettings";
 import { DataManagementSettings } from "@/components/DataManagementSettings";
+import { PomodoroSettings } from "@/components/PomodoroSettings";
 import type { ColorMode } from "@/lib/appearance";
 import {
   getColorMode,
@@ -40,6 +41,7 @@ export default function SettingsPage() {
       <ColorModeSettings colorMode={colorMode} onColorModeChange={handleColorModeChange} />
       <ThemeSettings currentTheme={currentTheme} onThemeChange={handleThemeChange} />
       <CalendarHoursSettings key={`cal-${refreshKey}`} onSaved={handleDataReset} />
+      <PomodoroSettings key={`pomodoro-${refreshKey}`} />
       <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
         <HabitsSettings onHabitsChange={handleDataReset} />
       </div>

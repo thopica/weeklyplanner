@@ -9,6 +9,7 @@ import SettingsPage from "@/pages/Settings";
 import PrivacyPage from "@/pages/privacy";
 import TermsPage from "@/pages/terms";
 import { useEffect } from "react";
+import { PomodoroProvider } from "@/components/pomodoro/PomodoroProvider";
 import { getColorMode, getTheme, initAppearance } from "@/lib/storage";
 import { watchSystemColorMode } from "@/lib/appearance";
 
@@ -35,7 +36,9 @@ function App() {
   return (
     <TooltipProvider>
       <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-        <Router />
+        <PomodoroProvider>
+          <Router />
+        </PomodoroProvider>
       </WouterRouter>
       <Toaster />
     </TooltipProvider>

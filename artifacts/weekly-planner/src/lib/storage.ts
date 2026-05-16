@@ -21,6 +21,11 @@ import {
   OUTLOOK_DEFAULT_DAY_RANGE,
   SLOT_MINUTES,
 } from './schedule';
+import {
+  DEFAULT_POMODORO_SETTINGS,
+  normalizePomodoroSettings,
+  type PomodoroSettings,
+} from './pomodoro';
 function isLegacyHourBlock(
   b: unknown,
 ): b is { id: string; hour: number; label: string } {
@@ -77,6 +82,7 @@ export const STORAGE_KEYS = {
   SCHEDULE_RANGE: 'weeklyPlanner_scheduleRange',
   SCHEDULE_VISIBLE: 'weeklyPlanner_scheduleVisible',
   SCHEDULE_PANE_WIDTH: 'weeklyPlanner_schedulePaneWidth',
+  POMODORO: 'weeklyPlanner_pomodoro',
 };
 
 export const SCHEDULE_PANE_WIDTH_DEFAULT = 312;
@@ -267,6 +273,21 @@ export function pruneHabitLogs(removedIds: string[]): void {
     }
   }
   if (changed) savePlannerData(data);
+}
+
+export function getPomodoroSettings(): PomodoroSettings {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.POMODORO);
+    if (!raw) return { ...DEFAULT_POMODORO_SETTINGS };
+    return normalizePomodoroSettings(JSON.parse(raw) as Partial<PomodoroSettings>);
+  } catch {
+    return { ...DEFAULT_POMODORO_SETTINGS };
+  }
+}
+
+export function savePomodoroSettings(settings: PomodoroSettings): void {
+  const normalized = normalizePomodoroSettings(settings);
+  localStorage.setItem(STORAGE_KEYS.POMODORO, JSON.stringify(normalized));
 }
 
 export function getTheme(): string {

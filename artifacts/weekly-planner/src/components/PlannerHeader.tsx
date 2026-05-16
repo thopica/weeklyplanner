@@ -3,6 +3,7 @@ import { format, parseISO, getWeek } from "date-fns";
 import { Link } from "wouter";
 import { Settings, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { PomodoroHeaderButton } from "@/components/pomodoro/PomodoroHeaderButton";
 import { PlannerViewToggle } from "@/components/PlannerViewToggle";
 import { formatWorkweekRange, getWorkweekDays } from "@/lib/workweek";
 
@@ -98,6 +99,7 @@ export function PlannerHeader({
 
       <div className="flex shrink-0 items-center gap-2">
         {trailing}
+        <PomodoroHeaderButton />
         <PlannerViewToggle />
         <Button
           variant="ghost"

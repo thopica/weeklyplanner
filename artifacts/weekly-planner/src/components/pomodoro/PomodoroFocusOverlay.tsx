@@ -1,0 +1,287 @@
+import { X, Pause, Play, RotateCcw, SkipForward } from "lucide-react";
+import { motion, useReducedMotion } from "framer-motion";
+import { Button } from "@/components/ui/button";
+import { usePomodoro } from "@/components/pomodoro/PomodoroProvider";
+import { PomodoroCountdownEditor } from "@/components/pomodoro/PomodoroCountdownEditor";
+import { phaseLabel, type PomodoroPhase } from "@/lib/pomodoro";
+import { tasteTransition } from "@/lib/motion";
+import { cn } from "@/lib/utils";
+import pomodoroMascot from "@/assets/pomodoro-mascot.png";
+
+const RING_SIZE = 280;
+const STROKE = 10;
+const RADIUS = (RING_SIZE - STROKE) / 2;
+const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
+
+const PHASES: { id: PomodoroPhase; label: string }[] = [
+  { id: "focus", label: "Focus" },
+  { id: "shortBreak", label: "Short break" },
+  { id: "longBreak", label: "Long break" },
+];
+
+interface PomodoroFocusOverlayProps {
+  onExit: () => void;
+  mainFocusText: string;
+}
+
+export function PomodoroFocusOverlay({
+  onExit,
+  mainFocusText,
+}: PomodoroFocusOverlayProps) {
+  const reduceMotion = useReducedMotion();
+  const {
+    phase,
+    status,
+    progress,
+    interstitial,
+    remainingSeconds,
+    canEditDuration,
+    canSelectPhase,
+    playButtonLabel,
+    togglePlayPause,
+    selectPhase,
+    setSessionDuration,
+    skipInterstitial,
+    resetSession,
+  } = usePomodoro();
+
+  const phaseTitle = interstitial
+    ? `Up next: ${phaseLabel(interstitial.nextPhase)}`
+    : phaseLabel(phase);
+
+  const dashOffset = CIRCUMFERENCE * (1 - progress);
+  const urgent =
+    !interstitial && status === "running" && remainingSeconds > 0 && remainingSeconds <= 10;
+
+  return (
+    <motion.div
+      className="fixed inset-0 z-100 flex flex-col bg-background"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Pomodoro focus mode"
+      data-testid="pomodoro-overlay"
+    >
+      <motion.div
+        className="pointer-events-none absolute inset-0 overflow-hidden"
+        aria-hidden
+        animate={
+          reduceMotion
+            ? undefined
+            : {
+                scale: phase === "focus" ? [1, 1.04, 1] : 1,
+              }
+        }
+        transition={
+          reduceMotion
+            ? undefined
+            : { duration: 6, repeat: Infinity, ease: "easeInOut" }
+        }
+      >
+        <PhaseGradient phase={phase} />
+      </motion.div>
+
+      <header className="relative z-10 flex shrink-0 items-center justify-between px-4 py-3 sm:px-6">
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          onClick={onExit}
+          className="h-10 w-10 rounded-full bg-card/80 shadow-sm backdrop-blur-sm"
+          aria-label="Exit focus mode"
+          data-testid="button-pomodoro-exit"
+        >
+          <X className="h-5 w-5" />
+        </Button>
+        <motionSpacer />
+      </header>
+
+      <main className="relative z-10 flex flex-1 flex-col items-center justify-center px-6 pb-8">
+        <motion.img
+          src={pomodoroMascot}
+          alt=""
+          aria-hidden
+          className="mb-6 h-24 w-24 object-contain sm:h-28 sm:w-28"
+          animate={
+            reduceMotion
+              ? undefined
+              : { y: phase === "focus" && status === "running" ? [0, -6, 0] : 0 }
+          }
+          transition={
+            reduceMotion
+              ? undefined
+              : { duration: 3.5, repeat: Infinity, ease: "easeInOut" }
+          }
+        />
+
+        <div
+          className="mb-6 flex w-full max-w-md rounded-full border border-border bg-card/60 p-1 backdrop-blur-sm"
+          role="tablist"
+          aria-label="Pomodoro phase"
+        >
+          {PHASES.map(({ id, label }) => (
+            <button
+              key={id}
+              type="button"
+              role="tab"
+              aria-selected={phase === id}
+              disabled={!canSelectPhase}
+              onClick={() => selectPhase(id)}
+              data-testid={`pomodoro-tab-${id}`}
+              className={cn(
+                "flex-1 rounded-full px-2 py-2 text-center text-xs font-medium transition-colors sm:text-sm",
+                phase === id
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground",
+                !canSelectPhase && "cursor-not-allowed opacity-60",
+              )}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {!canSelectPhase && status === "running" && (
+          <p className="type-caption -mt-4 mb-4 text-muted-foreground">
+            Pause to switch phase or edit time
+          </p>
+        )}
+
+        <motion.p
+          key={phaseTitle}
+          initial={reduceMotion ? false : { opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={tasteTransition(reduceMotion, { duration: 0.25 })}
+          className="type-section-title mb-2 text-center text-muted-foreground"
+        >
+          {phaseTitle}
+        </motion.p>
+
+        {mainFocusText && phase === "focus" && !interstitial && (
+          <p className="type-ui mb-6 max-w-md text-center text-foreground/80">
+            {mainFocusText}
+          </p>
+        )}
+
+        <div className="relative flex flex-col items-center justify-center">
+          <svg
+            width={RING_SIZE}
+            height={RING_SIZE}
+            className={cn(
+              "-rotate-90",
+              urgent && !reduceMotion && "animate-pulse",
+            )}
+            aria-hidden
+          >
+            <circle
+              cx={RING_SIZE / 2}
+              cy={RING_SIZE / 2}
+              r={RADIUS}
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={STROKE}
+              className="text-muted/30"
+            />
+            <circle
+              cx={RING_SIZE / 2}
+              cy={RING_SIZE / 2}
+              r={RADIUS}
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={STROKE}
+              strokeLinecap="round"
+              strokeDasharray={CIRCUMFERENCE}
+              strokeDashoffset={dashOffset}
+              className={cn(
+                "transition-[stroke-dashoffset] duration-300",
+                phase === "focus" && "text-primary",
+                phase === "shortBreak" && "text-secondary",
+                phase === "longBreak" && "text-accent-foreground",
+              )}
+            />
+          </svg>
+          <motion.div
+            className="absolute inset-0 flex flex-col items-center justify-center gap-1"
+            aria-live="polite"
+          >
+            {interstitial ? (
+              <span className="font-serif text-6xl font-semibold tabular-nums tracking-tight sm:text-7xl">
+                {interstitial.secondsLeft}
+              </span>
+            ) : (
+              <>
+                <PomodoroCountdownEditor
+                  remainingSeconds={remainingSeconds}
+                  canEdit={canEditDuration}
+                  onCommit={(seconds) => setSessionDuration(phase, seconds)}
+                />
+                {canEditDuration && (
+                  <span className="type-caption text-muted-foreground">
+                    Tap to edit
+                  </span>
+                )}
+              </>
+            )}
+          </motion.div>
+        </div>
+      </main>
+
+      <footer className="relative z-10 flex shrink-0 flex-wrap items-center justify-center gap-2 px-4 pb-8 sm:gap-3">
+        {interstitial ? (
+          <Button type="button" onClick={skipInterstitial} className="min-w-40">
+            Start now
+            <SkipForward className="ml-2 h-4 w-4" />
+          </Button>
+        ) : (
+          <>
+            <Button
+              type="button"
+              variant={status === "running" ? "secondary" : "default"}
+              onClick={togglePlayPause}
+              data-testid="button-pomodoro-play-pause"
+              className="min-w-32"
+            >
+              {status === "running" ? (
+                <>
+                  <Pause className="mr-2 h-4 w-4" />
+                  {playButtonLabel}
+                </>
+              ) : (
+                <>
+                  <Play className="mr-2 h-4 w-4" />
+                  {playButtonLabel}
+                </>
+              )}
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={resetSession}
+              className="text-muted-foreground"
+              data-testid="button-pomodoro-reset"
+            >
+              <RotateCcw className="mr-2 h-4 w-4" />
+              Reset
+            </Button>
+          </>
+        )}
+      </footer>
+    </motion.div>
+  );
+}
+
+function PhaseGradient({ phase }: { phase: PomodoroPhase }) {
+  return (
+    <div
+      className={cn(
+        "absolute left-1/2 top-1/2 h-[140vmax] w-[140vmax] -translate-x-1/2 -translate-y-1/2 rounded-full opacity-40 blur-3xl",
+        phase === "focus" && "bg-primary/25",
+        phase === "shortBreak" && "bg-secondary/20",
+        phase === "longBreak" && "bg-accent/25",
+      )}
+    />
+  );
+}
+
+function motionSpacer() {
+  return <div className="w-10" aria-hidden />;
+}
