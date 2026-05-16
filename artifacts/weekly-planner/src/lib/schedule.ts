@@ -7,6 +7,9 @@ export const SLOT_MINUTES = 30;
 /** Row height for one 30-minute slot (px). */
 export const PX_PER_SLOT = 32;
 
+/** Inset so hour labels centered on grid lines are not clipped at range start/end. */
+export const TIMELINE_EDGE_INSET_PX = PX_PER_SLOT / 2;
+
 /** Absolute end of calendar day (midnight, exclusive). */
 export const CALENDAR_DAY_END_MIN = 24 * 60;
 
@@ -72,12 +75,52 @@ export function timelineHeightPx(range: DayScheduleRange): number {
   return timelineTicks(range).length * PX_PER_SLOT;
 }
 
+export function timelineContentHeightPx(range: DayScheduleRange): number {
+  return timelineHeightPx(range) + TIMELINE_EDGE_INSET_PX * 2;
+}
+
 export function minuteToTopPx(minute: number, range: DayScheduleRange): number {
-  return ((minute - range.startMin) / SLOT_MINUTES) * PX_PER_SLOT;
+  return (
+    TIMELINE_EDGE_INSET_PX +
+    ((minute - range.startMin) / SLOT_MINUTES) * PX_PER_SLOT
+  );
 }
 
 export function blockHeightPx(durationMinutes: number): number {
   return (durationMinutes / SLOT_MINUTES) * PX_PER_SLOT;
+}
+
+/** Week view: one row per hour. */
+export const PX_PER_HOUR = 48;
+
+export const TIMELINE_HOUR_EDGE_INSET_PX = PX_PER_HOUR / 2;
+
+export type ScheduleTimelineGranularity = "halfHour" | "hour";
+
+/** Hour row starts (on the hour) within [range.startMin, range.endMin). */
+export function timelineHourTicks(range: DayScheduleRange): number[] {
+  const ticks: number[] = [];
+  let hour = Math.floor(range.startMin / 60) * 60;
+  if (hour < range.startMin) hour += 60;
+  for (; hour < range.endMin; hour += 60) {
+    ticks.push(hour);
+  }
+  return ticks;
+}
+
+export function timelineHourContentHeightPx(range: DayScheduleRange): number {
+  return timelineHourTicks(range).length * PX_PER_HOUR + TIMELINE_HOUR_EDGE_INSET_PX * 2;
+}
+
+export function minuteToTopPxHourly(minute: number, range: DayScheduleRange): number {
+  return (
+    TIMELINE_HOUR_EDGE_INSET_PX +
+    ((minute - range.startMin) / 60) * PX_PER_HOUR
+  );
+}
+
+export function blockHeightPxHourly(durationMinutes: number): number {
+  return (durationMinutes / 60) * PX_PER_HOUR;
 }
 
 /** Latest valid block start on the grid for the given range (30-min aligned). */

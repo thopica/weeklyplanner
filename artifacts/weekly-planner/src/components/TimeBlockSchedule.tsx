@@ -32,10 +32,11 @@ import {
   maxExclusiveEndForStart,
   minuteToTopPx,
   snapToGrid,
-  timelineHeightPx,
   timelineTicks,
   validExclusiveEndsFromStart,
 } from "@/lib/schedule";
+import { ScheduleTimeRail } from "@/components/schedule/ScheduleTimeRail";
+import { ScheduleSlotGrid } from "@/components/schedule/ScheduleSlotGrid";
 
 interface TimeBlockScheduleProps {
   blocks: TimeBlock[];
@@ -138,7 +139,6 @@ export function TimeBlockSchedule({ blocks, onChange, range }: TimeBlockSchedule
 
   const sorted = [...displayBlocks].sort((a, b) => a.startMinute - b.startMinute);
   const ticks = timelineTicks(range);
-  const gridH = timelineHeightPx(range);
 
   const applyBlocks = useCallback(
     (next: TimeBlock[]) => {
@@ -324,58 +324,16 @@ export function TimeBlockSchedule({ blocks, onChange, range }: TimeBlockSchedule
       data-testid="time-block-schedule"
     >
       <div className="scrollbar-hide min-h-0 flex-1 overflow-y-auto">
-        <div className="flex px-2 pb-3 pt-2">
-          <div
-            className="relative w-[4.75rem] shrink-0 border-r-2 border-border bg-surface-subtle sm:w-20"
-            style={{ height: gridH }}
+        <div className="flex px-3 py-3 sm:px-4 sm:py-4">
+          <ScheduleTimeRail range={range} />
+          <ScheduleSlotGrid
+            range={range}
+            interactive
+            onSlotClick={(m) => {
+              if (resize) return;
+              handleSlotDoubleClick(m);
+            }}
           >
-            {ticks.map((m, i) => {
-              const isHour = m % 60 === 0;
-              return (
-                <div
-                  key={m}
-                  className="pointer-events-none absolute right-0 left-0 flex justify-end pr-2"
-                  style={{
-                    top: i * PX_PER_SLOT,
-                    transform: "translateY(-50%)",
-                  }}
-                >
-                  <span
-                    className={
-                      isHour
-                        ? "type-caption block whitespace-nowrap font-semibold leading-none text-foreground"
-                        : "type-caption block whitespace-nowrap font-medium leading-none text-foreground-subtle"
-                    }
-                  >
-                    {formatScheduleTime(m)}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-
-          <div
-            className="relative min-w-0 flex-1"
-            style={{ height: gridH }}
-          >
-            {ticks.map((m, i) => (
-              <div
-                key={m}
-                className="absolute left-0 right-0 border-b border-border transition-colors motion-reduce:transition-none hover:bg-surface-subtle"
-                style={{
-                  top: i * PX_PER_SLOT,
-                  height: PX_PER_SLOT,
-                }}
-                onClick={() => {
-                  if (resize) return;
-                  handleSlotDoubleClick(m);
-                }}
-                onDoubleClick={(e) => {
-                  e.preventDefault();
-                }}
-              />
-            ))}
-
             {sorted.map((block) => (
               <BlockOverlay
                 key={block.id}
@@ -386,7 +344,7 @@ export function TimeBlockSchedule({ blocks, onChange, range }: TimeBlockSchedule
                 isResizing={!!resize}
               />
             ))}
-          </div>
+          </ScheduleSlotGrid>
         </div>
       </div>
 

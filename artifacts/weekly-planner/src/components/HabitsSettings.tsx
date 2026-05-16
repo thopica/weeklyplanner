@@ -48,18 +48,24 @@ function validateDraft(draft: HabitDraft): string | null {
   return null;
 }
 
+function newHabitId(): string {
+  return typeof crypto !== "undefined" && crypto.randomUUID
+    ? `habit-${crypto.randomUUID()}`
+    : `habit-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+}
+
 function draftToHabit(draft: HabitDraft, existing?: HabitDefinition): HabitDefinition {
   const name = draft.name.trim();
   if (draft.kind === "boolean") {
     return {
-      id: existing?.id ?? `habit-${Date.now()}`,
+      id: existing?.id ?? newHabitId(),
       name,
       kind: "boolean",
       createdAt: existing?.createdAt ?? new Date().toISOString(),
     };
   }
   return {
-    id: existing?.id ?? `habit-${Date.now()}`,
+    id: existing?.id ?? newHabitId(),
     name,
     kind: "quantifiable",
     unit: draft.unit.trim(),

@@ -3,16 +3,21 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/Home";
+import WeekPage from "@/pages/Week";
+import InsightsPage from "@/pages/Insights";
 import SettingsPage from "@/pages/Settings";
 import PrivacyPage from "@/pages/privacy";
 import TermsPage from "@/pages/terms";
 import { useEffect } from "react";
-import { getTheme } from "@/lib/storage";
+import { getColorMode, getTheme, initAppearance } from "@/lib/storage";
+import { watchSystemColorMode } from "@/lib/appearance";
 
 function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
+      <Route path="/week" component={WeekPage} />
+      <Route path="/insights" component={InsightsPage} />
       <Route path="/settings" component={SettingsPage} />
       <Route path="/privacy" component={PrivacyPage} />
       <Route path="/terms" component={TermsPage} />
@@ -23,7 +28,8 @@ function Router() {
 
 function App() {
   useEffect(() => {
-    document.documentElement.className = getTheme();
+    initAppearance();
+    return watchSystemColorMode(getTheme, getColorMode);
   }, []);
 
   return (

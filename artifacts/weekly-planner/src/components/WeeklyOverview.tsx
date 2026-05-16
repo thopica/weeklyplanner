@@ -1,6 +1,7 @@
-import { format, startOfWeek, addDays, isSameDay } from "date-fns";
+import { format, startOfWeek, addDays, isSameDay, parseISO } from "date-fns";
 import { getDayData, getHabits } from "@/lib/storage";
 import { isQuantifiableHabitMet, normalizeHabitLog } from "@/lib/habits";
+import { isMeaningfulTask, mergeDayTasks } from "@/lib/tasks";
 import type { HabitDefinition } from "@/lib/types";
 
 interface WeeklyOverviewProps {
@@ -11,11 +12,12 @@ function habitsMetForDay(
   dateStr: string,
   habitDefs: HabitDefinition[],
 ): { completed: number; total: number } {
-  if (habitDefs.length === 0) return { completed: 0, total: 0 };
+  const active = habitDefs.filter((h) => habitExistedOnDate(h, dateStr));
+  if (active.length === 0) return { completed: 0, total: 0 };
   const data = getDayData(dateStr);
   const logs = data.habitLogs ?? {};
   let completed = 0;
-  for (const habit of habitDefs) {
+  for (const habit of active) {
     const log = logs[habit.id];
     if (habit.kind === "boolean") {
       if (log?.completed) completed += 1;
@@ -23,11 +25,20 @@ function habitsMetForDay(
       completed += 1;
     }
   }
-  return { completed, total: habitDefs.length };
+  return { completed, total: active.length };
+}
+
+function habitExistedOnDate(habit: HabitDefinition, dateStr: string): boolean {
+  try {
+    const created = format(parseISO(habit.createdAt), "yyyy-MM-dd");
+    return dateStr >= created;
+  } catch {
+    return true;
+  }
 }
 
 export function WeeklyOverview({ selectedDateStr }: WeeklyOverviewProps) {
-  const selectedDate = new Date(selectedDateStr);
+  const selectedDate = parseISO(`${selectedDateStr}T12:00:00`);
   const weekStart = startOfWeek(selectedDate, { weekStartsOn: 1 });
   const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
   const habitDefs = getHabits();
@@ -39,9 +50,9 @@ export function WeeklyOverview({ selectedDateStr }: WeeklyOverviewProps) {
       </h2>
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4 lg:grid-cols-7">
         {days.map((date) => {
-          const dateStr = date.toISOString().split("T")[0];
+          const dateStr = format(date, "yyyy-MM-dd");
           const data = getDayData(dateStr);
-          const allTasks = [...data.highPriorityTasks, ...data.generalTasks];
+          const allTasks = mergeDayTasks(data).filter(isMeaningfulTask);
           const completedTasks = allTasks.filter((t) => t.completed).length;
           const totalTasks = allTasks.length;
           const progress =

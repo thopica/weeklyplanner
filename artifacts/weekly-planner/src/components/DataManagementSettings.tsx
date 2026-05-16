@@ -1,9 +1,10 @@
 import { Download, Upload, Trash2, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { toast } from "@/hooks/use-toast";
 import {
   clearAllData,
   getPlannerData,
-  savePlannerData,
+  importPlannerBackup,
   loadDemoData,
 } from "@/lib/storage";
 
@@ -24,8 +25,21 @@ export function DataManagementSettings({
   };
 
   const handleLoadDemo = () => {
-    loadDemoData(selectedDateStr);
-    onDataReset();
+    try {
+      loadDemoData(selectedDateStr);
+      onDataReset();
+      toast({
+        title: "Demo data loaded",
+        description: "30 days of sample tasks and habits are ready. Open Insights or Today on the planner.",
+      });
+    } catch (error) {
+      console.error("loadDemoData failed", error);
+      toast({
+        variant: "destructive",
+        title: "Could not load demo data",
+        description: "Try clearing data first, then load demo again.",
+      });
+    }
   };
 
   const handleExport = () => {
@@ -46,8 +60,7 @@ export function DataManagementSettings({
     reader.onload = (event) => {
       try {
         const json = JSON.parse(event.target?.result as string);
-        if (json.days) {
-          savePlannerData(json);
+        if (importPlannerBackup(json)) {
           onDataReset();
           alert("Data imported successfully!");
         } else {
@@ -95,6 +108,7 @@ export function DataManagementSettings({
         </div>
 
         <Button
+          type="button"
           variant="secondary"
           className="w-full justify-start text-sm"
           onClick={handleLoadDemo}

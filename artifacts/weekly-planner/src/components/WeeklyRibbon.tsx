@@ -1,25 +1,30 @@
 import { format, startOfWeek, addDays, isSameDay, addWeeks, subWeeks } from "date-fns";
 import { ChevronLeft, ChevronRight, CalendarDays } from "lucide-react";
 import { PlannerData } from "@/lib/types";
+import { getDayTaskSummary } from "@/lib/tasks";
+import { IncompleteDayIndicator } from "@/components/IncompleteDayIndicator";
 import { cn } from "@/lib/utils";
 
 interface WeeklyRibbonProps {
   selectedDate: Date;
   onSelectDate: (dateStr: string) => void;
   plannerData: PlannerData;
-  scheduleVisible: boolean;
-  onToggleSchedule: () => void;
+  workweekOnly?: boolean;
+  scheduleVisible?: boolean;
+  onToggleSchedule?: () => void;
 }
 
 export function WeeklyRibbon({
   selectedDate,
   onSelectDate,
   plannerData,
-  scheduleVisible,
+  workweekOnly = false,
+  scheduleVisible = false,
   onToggleSchedule,
 }: WeeklyRibbonProps) {
   const weekStart = startOfWeek(selectedDate, { weekStartsOn: 1 });
-  const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+  const allDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+  const days = workweekOnly ? allDays.slice(0, 5) : allDays;
 
   const todayStr = format(new Date(), "yyyy-MM-dd");
   const todayWeekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
@@ -35,14 +40,6 @@ export function WeeklyRibbon({
 
   const goToToday = () => {
     onSelectDate(todayStr);
-  };
-
-  const getTaskCount = (date: Date) => {
-    const dateStr = format(date, "yyyy-MM-dd");
-    const data = plannerData.days[dateStr];
-    if (!data) return { total: 0, completed: 0 };
-    const all = [...data.highPriorityTasks, ...data.generalTasks];
-    return { total: all.length, completed: all.filter((t) => t.completed).length };
   };
 
   return (
@@ -66,9 +63,8 @@ export function WeeklyRibbon({
           const dateStr = format(date, "yyyy-MM-dd");
           const isSelected = isSameDay(date, selectedDate);
           const isToday = dateStr === todayStr;
-          const { total, completed } = getTaskCount(date);
-          const hasOpenTasks = total - completed > 0;
-          const allDone = total > 0 && completed === total;
+          const isPastDay = dateStr < todayStr;
+          const summary = getDayTaskSummary(plannerData.days[dateStr]);
 
           return (
             <button
@@ -98,29 +94,13 @@ export function WeeklyRibbon({
               <span className="font-serif text-lead font-bold leading-none tabular-nums">
                 {format(date, "d")}
               </span>
-              <span className="flex h-1.5 w-full items-center justify-center" aria-hidden>
-                {hasOpenTasks ? (
-                  <span
-                    className="h-1.5 w-1.5 rounded-full"
-                    style={{
-                      background: isSelected
-                        ? "hsl(var(--primary-foreground) / 0.85)"
-                        : "hsl(var(--primary))",
-                    }}
-                  />
-                ) : allDone ? (
-                  <span
-                    className="type-caption font-bold leading-none"
-                    style={{
-                      color: isSelected
-                        ? "hsl(var(--primary-foreground) / 0.75)"
-                        : "hsl(var(--secondary))",
-                    }}
-                  >
-                    ✓
-                  </span>
-                ) : null}
-              </span>
+              <IncompleteDayIndicator
+                summary={summary}
+                variant="ribbon"
+                isSelected={isSelected}
+                isToday={isToday}
+                isPastDay={isPastDay}
+              />
             </button>
           );
         })}
@@ -153,22 +133,24 @@ export function WeeklyRibbon({
         </button>
       )}
 
-      <button
-        type="button"
-        onClick={onToggleSchedule}
-        data-testid="button-toggle-schedule-ribbon"
-        title={scheduleVisible ? "Hide schedule" : "Show schedule"}
-        aria-label={scheduleVisible ? "Hide schedule" : "Show schedule"}
-        aria-pressed={scheduleVisible}
-        className={cn(
-          "ml-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-colors",
-          scheduleVisible
-            ? "bg-accent text-accent-foreground hover:bg-accent/80"
-            : "text-muted-foreground hover:bg-accent hover:text-foreground",
-        )}
-      >
-        <CalendarDays className="h-3.5 w-3.5" strokeWidth={2} />
-      </button>
+      {onToggleSchedule ? (
+        <button
+          type="button"
+          onClick={onToggleSchedule}
+          data-testid="button-toggle-schedule-ribbon"
+          title={scheduleVisible ? "Hide schedule" : "Show schedule"}
+          aria-label={scheduleVisible ? "Hide schedule" : "Show schedule"}
+          aria-pressed={scheduleVisible}
+          className={cn(
+            "ml-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-colors",
+            scheduleVisible
+              ? "bg-accent text-accent-foreground hover:bg-accent/80"
+              : "text-muted-foreground hover:bg-accent hover:text-foreground",
+          )}
+        >
+          <CalendarDays className="h-3.5 w-3.5" strokeWidth={2} />
+        </button>
+      ) : null}
     </div>
   );
 }

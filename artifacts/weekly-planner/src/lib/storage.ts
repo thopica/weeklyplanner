@@ -1,10 +1,16 @@
-import { format } from 'date-fns';
+import { addDays, differenceInCalendarDays, format, parseISO, subDays } from 'date-fns';
+import {
+  applyAppearance,
+  type ColorMode,
+  isDarkModeResolved,
+} from './appearance';
 import {
   PlannerData,
   DayData,
   defaultDayData,
   TimeBlock,
   HabitDefinition,
+  Task,
 } from './types';
 import {
   type DayScheduleRange,
@@ -15,7 +21,6 @@ import {
   OUTLOOK_DEFAULT_DAY_RANGE,
   SLOT_MINUTES,
 } from './schedule';
-
 function isLegacyHourBlock(
   b: unknown,
 ): b is { id: string; hour: number; label: string } {
@@ -67,6 +72,7 @@ function migrateTimeBlocks(
 export const STORAGE_KEYS = {
   PLANNER_DATA: 'weeklyPlanner_data',
   THEME: 'weeklyPlanner_theme',
+  COLOR_MODE: 'weeklyPlanner_colorMode',
   SELECTED_DATE: 'weeklyPlanner_selectedDate',
   SCHEDULE_RANGE: 'weeklyPlanner_scheduleRange',
   SCHEDULE_VISIBLE: 'weeklyPlanner_scheduleVisible',
@@ -186,6 +192,15 @@ export function savePlannerData(data: PlannerData): void {
   localStorage.setItem(STORAGE_KEYS.PLANNER_DATA, JSON.stringify(data));
 }
 
+/** Validate and persist a backup JSON object. Returns false when the shape is invalid. */
+export function importPlannerBackup(raw: unknown): boolean {
+  if (typeof raw !== "object" || raw === null) return false;
+  const candidate = raw as Partial<PlannerData>;
+  if (!candidate.days || typeof candidate.days !== "object") return false;
+  savePlannerData(normalizePlannerData(candidate as PlannerData));
+  return true;
+}
+
 export function getDayData(dateStr: string): DayData {
   const data = getPlannerData();
   const raw = data.days[dateStr];
@@ -258,9 +273,30 @@ export function getTheme(): string {
   return localStorage.getItem(STORAGE_KEYS.THEME) || 'theme-boho';
 }
 
+export function getColorMode(): ColorMode {
+  const stored = localStorage.getItem(STORAGE_KEYS.COLOR_MODE);
+  if (stored === 'light' || stored === 'dark' || stored === 'system') {
+    return stored;
+  }
+  return 'light';
+}
+
 export function saveTheme(theme: string): void {
   localStorage.setItem(STORAGE_KEYS.THEME, theme);
-  document.documentElement.className = theme;
+  applyAppearance(theme, getColorMode());
+}
+
+export function saveColorMode(mode: ColorMode): void {
+  localStorage.setItem(STORAGE_KEYS.COLOR_MODE, mode);
+  applyAppearance(getTheme(), mode);
+}
+
+export function initAppearance(): void {
+  applyAppearance(getTheme(), getColorMode());
+}
+
+export function isDarkAppearance(): boolean {
+  return isDarkModeResolved(getColorMode());
 }
 
 /** Returns today's date as YYYY-MM-DD, timezone-safe. */
@@ -280,55 +316,205 @@ export function saveSelectedDate(dateStr: string): void {
   localStorage.setItem(STORAGE_KEYS.SELECTED_DATE, dateStr);
 }
 
-export function loadDemoData(dateStr: string): void {
+const DEMO_HABIT_RUN_ID = "demo-habit-run";
+const DEMO_HABIT_STEPS_ID = "demo-habit-steps";
+const DEMO_INSIGHTS_DAYS = 30;
+
+/** Parse YYYY-MM-DD as local noon (avoids UTC day-shift bugs). */
+function parseLocalDateStr(dateStr: string): Date {
+  return parseISO(`${dateStr}T12:00:00`);
+}
+
+function demoIso(dateStr: string, hour = 10): string {
+  return parseISO(`${dateStr}T${String(hour).padStart(2, "0")}:30:00`).toISOString();
+}
+
+function demoTask(
+  id: string,
+  dateStr: string,
+  text: string,
+  completed: boolean,
+  hour = 10,
+): Task {
+  return { id, text, completed, createdAt: demoIso(dateStr, hour) };
+}
+
+/** Run habit met? `daysFromEnd` 0 = today; designed for ~12-day streak at end. */
+function demoRunMet(daysFromEnd: number): boolean {
+  if (daysFromEnd <= 11) return true;
+  if (daysFromEnd === 12) return false;
+  if (daysFromEnd <= 18) return true;
+  if (daysFromEnd === 19) return false;
+  return daysFromEnd % 3 !== 0;
+}
+
+function demoStepsActual(daysFromEnd: number): number {
+  const base = [4200, 9100, 8800, 7600, 10200, 5400, 8300, 7900, 9500, 6200];
+  if (daysFromEnd < base.length) return base[daysFromEnd];
+  return daysFromEnd % 4 === 0 ? 5200 : 8400 + (daysFromEnd % 5) * 200;
+}
+
+function buildDemoInsightsDay(
+  dateStr: string,
+  daysFromEnd: number,
+  runId: string,
+  stepsId: string,
+  rich: boolean,
+): DayData {
+  const stepsActual = demoStepsActual(daysFromEnd);
+  const runMet = demoRunMet(daysFromEnd);
+
+  if (rich) {
+    return {
+      mainFocus: "Finish the creative brief for client project",
+      mainFocusCompleted: false,
+      highPriorityTasks: [
+        demoTask("hp1", dateStr, "Draft proposal outline", true, 9),
+        demoTask("hp2", dateStr, "Review feedback with team", false, 11),
+        demoTask("hp3", dateStr, "Send final invoice", false, 14),
+      ],
+      generalTasks: [
+        demoTask("g1", dateStr, "Reply to Sarah's email", true, 10),
+        demoTask("g2", dateStr, "Order new notebook", true, 12),
+        demoTask("g3", dateStr, "Water the plants", false, 15),
+        demoTask("g4", dateStr, "Schedule dentist appointment", false, 16),
+        demoTask("g5", dateStr, "Clean inbox", false, 17),
+      ],
+      timeBlocks: [
+        { id: `demo-${dateStr}-1`, startMinute: 8 * 60, durationMinutes: 90, label: "Morning routine & coffee" },
+        { id: `demo-${dateStr}-2`, startMinute: 10 * 60, durationMinutes: 120, label: "Deep work: proposal" },
+        { id: `demo-${dateStr}-3`, startMinute: 13 * 60, durationMinutes: 60, label: "Lunch break" },
+        { id: `demo-${dateStr}-4`, startMinute: 14 * 60 + 30, durationMinutes: 30, label: "Team check-in" },
+        { id: `demo-${dateStr}-5`, startMinute: 15 * 60, durationMinutes: 120, label: "Afternoon focus" },
+      ],
+      meals: { breakfast: "Oatmeal with berries", lunch: "Salad bowl", dinner: "Pasta" },
+      gratitude: ["Sunshine today", "Good coffee", "Finishing a big task"],
+      brainDump:
+        "Need to remember to call Mom this weekend. Also, look up recipes for the dinner party on Friday.",
+      habitLogs: {
+        [runId]: { completed: runMet },
+        [stepsId]: { actual: stepsActual },
+      },
+    };
+  }
+
+  const cleanSweep = daysFromEnd % 7 === 2 || daysFromEnd === 8;
+  const backlogDay = daysFromEnd === 14;
+
+  const highPriorityTasks: Task[] = [
+    demoTask(
+      `demo-hp-a-${dateStr}`,
+      dateStr,
+      "Priority task A",
+      cleanSweep || daysFromEnd % 2 === 0,
+      9,
+    ),
+    demoTask(
+      `demo-hp-b-${dateStr}`,
+      dateStr,
+      "Priority task B",
+      cleanSweep || (daysFromEnd % 3 === 0 && !backlogDay),
+      11,
+    ),
+  ];
+
+  const generalTasks: Task[] = [
+    demoTask(
+      `demo-g-a-${dateStr}`,
+      dateStr,
+      "Inbox sweep",
+      cleanSweep || daysFromEnd % 4 !== 1,
+      13,
+    ),
+    demoTask(
+      `demo-g-b-${dateStr}`,
+      dateStr,
+      "Errand",
+      cleanSweep,
+      15,
+    ),
+    ...(backlogDay
+      ? [
+          demoTask(`demo-g-c-${dateStr}`, dateStr, "Follow up email", false, 16),
+          demoTask(`demo-g-d-${dateStr}`, dateStr, "File expenses", false, 17),
+        ]
+      : []),
+  ];
+
+  const backfill = daysFromEnd === 22;
+  if (backfill) {
+    generalTasks[0] = {
+      ...generalTasks[0],
+      createdAt: demoIso(format(addDays(parseLocalDateStr(dateStr), 2), "yyyy-MM-dd"), 18),
+    };
+  }
+
+  return {
+    ...structuredClone(defaultDayData),
+    mainFocus:
+      daysFromEnd % 5 === 0 ? "Ship weekly review" : "Stay on top of priorities",
+    mainFocusCompleted: cleanSweep,
+    highPriorityTasks,
+    generalTasks,
+    habitLogs: {
+      [runId]: { completed: runMet },
+      [stepsId]: { actual: stepsActual },
+    },
+  };
+}
+
+export function loadDemoData(anchorDateStr: string): void {
+  const habitCreatedAt = subDays(parseLocalDateStr(todayStr()), 45).toISOString();
   const demoHabitRun: HabitDefinition = {
-    id: "demo-habit-run",
+    id: DEMO_HABIT_RUN_ID,
     name: "Go for a run",
     kind: "boolean",
-    createdAt: new Date().toISOString(),
+    createdAt: habitCreatedAt,
   };
   const demoHabitSteps: HabitDefinition = {
-    id: "demo-habit-steps",
+    id: DEMO_HABIT_STEPS_ID,
     name: "Daily steps",
     kind: "quantifiable",
     unit: "steps",
-    target: 1000,
-    createdAt: new Date().toISOString(),
+    target: 8000,
+    createdAt: habitCreatedAt,
   };
 
-  const data = getPlannerData();
-  data.habits = [demoHabitRun, demoHabitSteps];
-  data.days[dateStr] = {
-    mainFocus: "Finish the creative brief for client project",
-    mainFocusCompleted: false,
-    highPriorityTasks: [
-      { id: "hp1", text: "Draft proposal outline", completed: true, createdAt: new Date().toISOString() },
-      { id: "hp2", text: "Review feedback with team", completed: false, createdAt: new Date().toISOString() },
-      { id: "hp3", text: "Send final invoice", completed: false, createdAt: new Date().toISOString() },
-    ],
-    generalTasks: [
-      { id: "g1", text: "Reply to Sarah's email", completed: true, createdAt: new Date().toISOString() },
-      { id: "g2", text: "Order new notebook", completed: true, createdAt: new Date().toISOString() },
-      { id: "g3", text: "Water the plants", completed: false, createdAt: new Date().toISOString() },
-      { id: "g4", text: "Schedule dentist appointment", completed: false, createdAt: new Date().toISOString() },
-      { id: "g5", text: "Clean inbox", completed: false, createdAt: new Date().toISOString() },
-    ],
-    timeBlocks: [
-      { id: "demo-1", startMinute: 8 * 60, durationMinutes: 90, label: "Morning routine & coffee" },
-      { id: "demo-2", startMinute: 10 * 60, durationMinutes: 120, label: "Deep work: proposal" },
-      { id: "demo-3", startMinute: 13 * 60, durationMinutes: 60, label: "Lunch break" },
-      { id: "demo-4", startMinute: 14 * 60 + 30, durationMinutes: 30, label: "Team check-in" },
-      { id: "demo-5", startMinute: 15 * 60, durationMinutes: 120, label: "Afternoon focus" },
-    ],
-    meals: { breakfast: "Oatmeal with berries", lunch: "Salad bowl", dinner: "Pasta" },
-    gratitude: ["Sunshine today", "Good coffee", "Finishing a big task"],
-    brainDump: "Need to remember to call Mom this weekend. Also, look up recipes for the dinner party on Friday.",
-    habitLogs: {
-      [demoHabitRun.id]: { completed: true },
-      [demoHabitSteps.id]: { actual: 890 },
-    },
-  };
+  const end = todayStr();
+  const endDate = parseLocalDateStr(end);
+  const data: PlannerData = { days: {}, habits: [demoHabitRun, demoHabitSteps] };
+  const filledDates = new Set<string>();
+
+  for (let i = DEMO_INSIGHTS_DAYS - 1; i >= 0; i--) {
+    const dayDateStr = format(subDays(endDate, i), "yyyy-MM-dd");
+    filledDates.add(dayDateStr);
+    const daysFromEnd = i;
+    const rich = dayDateStr === anchorDateStr || dayDateStr === end;
+    data.days[dayDateStr] = buildDemoInsightsDay(
+      dayDateStr,
+      daysFromEnd,
+      DEMO_HABIT_RUN_ID,
+      DEMO_HABIT_STEPS_ID,
+      rich,
+    );
+  }
+
+  if (!filledDates.has(anchorDateStr)) {
+    const daysFromEnd = Math.max(
+      0,
+      differenceInCalendarDays(endDate, parseLocalDateStr(anchorDateStr)),
+    );
+    data.days[anchorDateStr] = buildDemoInsightsDay(
+      anchorDateStr,
+      daysFromEnd,
+      DEMO_HABIT_RUN_ID,
+      DEMO_HABIT_STEPS_ID,
+      true,
+    );
+  }
+
   savePlannerData(data);
+  saveSelectedDate(end);
 }
 
 export function clearAllData(): void {
