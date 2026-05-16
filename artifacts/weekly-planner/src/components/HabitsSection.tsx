@@ -3,6 +3,7 @@ import { motion, useReducedMotion } from "framer-motion";
 import { CheckCircle2, Circle } from "lucide-react";
 import { tasteSpringToggle, tasteTransition } from "@/lib/motion";
 import { PlannerSection } from "@/components/PlannerSection";
+import { plannerFieldClass } from "@/lib/planner-field";
 import { cn } from "@/lib/utils";
 import {
   getHabitActual,
@@ -32,8 +33,10 @@ const habitNameClass = (done: boolean) =>
   );
 
 /** Typing-only numeric field; no browser steppers. Width grows with digit count. */
-const actualInputClass =
-  "h-8 min-w-[2.75rem] max-w-[9rem] shrink-0 rounded-md border border-border bg-background px-2 text-sm font-medium tabular-nums text-foreground shadow-sm placeholder:text-muted-foreground focus:outline-none focus-visible:outline-none focus-visible:ring-0 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none";
+const actualInputClass = plannerFieldClass(
+  "sm",
+  "h-8 min-w-[2.75rem] max-w-[9rem] shrink-0 px-2 text-sm font-medium tabular-nums [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none",
+);
 
 function parseDigitsOnly(raw: string): number | undefined {
   const digits = raw.replace(/\D/g, "");
@@ -61,7 +64,7 @@ function HabitStatusIcon({ met }: { met: boolean }) {
       {met ? (
         <CheckCircle2 className="h-6 w-6" strokeWidth={2} aria-label="Goal reached" />
       ) : (
-        <Circle className="h-6 w-6 opacity-40" strokeWidth={2} />
+        <Circle className="h-6 w-6 text-muted-foreground" strokeWidth={2} />
       )}
     </span>
   );

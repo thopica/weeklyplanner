@@ -1,4 +1,5 @@
 import { PlannerSection } from "@/components/PlannerSection";
+import { plannerFieldClass } from "@/lib/planner-field";
 
 interface GratitudeSectionProps {
   items: string[];
@@ -33,7 +34,7 @@ export function GratitudeSection({ items, onChange }: GratitudeSectionProps) {
               onChange={(e) => updateItem(i, e.target.value)}
               placeholder="Something good today…"
               data-testid={`gratitude-input-${i}`}
-              className="type-ui flex-1 border-b border-border bg-transparent py-1.5 text-foreground transition-colors focus:border-primary focus:outline-none"
+              className={plannerFieldClass("sm", "flex-1")}
             />
           </div>
         ))}

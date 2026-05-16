@@ -82,7 +82,7 @@ export function PlannerSection({
         <header
           className={cn(
             "flex flex-wrap items-start justify-between gap-x-3 gap-y-2",
-            isSubtle ? "mb-2" : "mb-3",
+            isSubtle ? "mb-2" : "mb-4",
           )}
         >
           <motion.div className={cn("flex min-w-0 items-start gap-3", step == null && "flex-1")}>

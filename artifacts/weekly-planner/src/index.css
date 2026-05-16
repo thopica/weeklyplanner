@@ -121,6 +121,13 @@
     0 1px 0 hsl(var(--foreground) / 0.045),
     0 10px 26px -6px hsl(var(--foreground) / 0.09),
     0 26px 52px -18px hsl(var(--primary) / 0.07);
+
+  --shadow-field:
+    0 1px 2px hsl(var(--foreground) / 0.06),
+    0 2px 6px hsl(var(--foreground) / 0.04);
+  --shadow-field-focus:
+    0 1px 2px hsl(var(--foreground) / 0.08),
+    0 4px 12px hsl(var(--foreground) / 0.07);
 }
 
 .theme-boho {
@@ -296,30 +303,31 @@
 .dark.theme-boho {
   --background: 25 20% 10%;
   --foreground: 36 28% 92%;
-  --card: 25 18% 14%;
+  --card: 25 18% 17%;
   --card-foreground: 36 28% 92%;
-  --card-border: 36 14% 28%;
-  --popover: 25 18% 14%;
+  --card-border: 36 14% 36%;
+  --popover: 25 18% 17%;
   --popover-foreground: 36 28% 92%;
-  --popover-border: 36 14% 28%;
+  --popover-border: 36 14% 36%;
   --primary: 17 52% 58%;
   --primary-foreground: 25 20% 10%;
-  --secondary: 120 22% 48%;
+  --secondary: 120 22% 52%;
   --secondary-foreground: 36 28% 92%;
-  --muted: 25 14% 18%;
-  --muted-foreground: 36 18% 68%;
-  --accent: 25 16% 20%;
+  --muted: 25 14% 21%;
+  --muted-foreground: 36 18% 75%;
+  --accent: 25 16% 23%;
   --accent-foreground: 17 52% 62%;
   --destructive: 0 72% 55%;
   --destructive-foreground: 0 0% 100%;
-  --border: 36 12% 26%;
-  --border-strong: 36 14% 34%;
-  --input: 36 12% 26%;
+  --border: 36 12% 36%;
+  --border-strong: 36 14% 43%;
+  --input: 36 12% 36%;
   --ring: 17 52% 58%;
-  --surface-subtle: 25 14% 17%;
-  --surface-accent: 17 22% 18%;
-  --foreground-subtle: 36 16% 72%;
-  --placeholder-foreground: 36 14% 58%;
+  --surface-subtle: 25 14% 20%;
+  --surface-accent: 17 22% 21%;
+  --foreground-subtle: 36 16% 77%;
+  --placeholder-foreground: 36 14% 65%;
+  --field-background: 25 18% 12%;
   --shadow-tinted:
     0 1px 0 hsl(0 0% 100% / 0.04),
     0 10px 26px -6px hsl(0 0% 0% / 0.45),
@@ -329,30 +337,31 @@
 .dark.theme-blush {
   --background: 337 28% 11%;
   --foreground: 0 40% 94%;
-  --card: 337 24% 14%;
+  --card: 337 24% 17%;
   --card-foreground: 0 40% 94%;
-  --card-border: 353 18% 30%;
-  --popover: 337 24% 14%;
+  --card-border: 353 18% 36%;
+  --popover: 337 24% 17%;
   --popover-foreground: 0 40% 94%;
-  --popover-border: 353 18% 30%;
+  --popover-border: 353 18% 36%;
   --primary: 353 48% 62%;
   --primary-foreground: 337 28% 11%;
-  --secondary: 355 35% 52%;
+  --secondary: 355 35% 56%;
   --secondary-foreground: 0 40% 96%;
-  --muted: 337 18% 18%;
-  --muted-foreground: 0 30% 72%;
-  --accent: 337 20% 20%;
+  --muted: 337 18% 21%;
+  --muted-foreground: 0 30% 75%;
+  --accent: 337 20% 23%;
   --accent-foreground: 353 48% 66%;
   --destructive: 0 72% 55%;
   --destructive-foreground: 0 0% 100%;
-  --border: 353 14% 28%;
-  --border-strong: 353 16% 36%;
-  --input: 353 14% 28%;
+  --border: 353 14% 36%;
+  --border-strong: 353 16% 43%;
+  --input: 353 14% 36%;
   --ring: 353 48% 62%;
-  --surface-subtle: 337 18% 17%;
-  --surface-accent: 353 22% 18%;
-  --foreground-subtle: 0 24% 74%;
-  --placeholder-foreground: 0 20% 60%;
+  --surface-subtle: 337 18% 20%;
+  --surface-accent: 353 22% 21%;
+  --foreground-subtle: 0 24% 77%;
+  --placeholder-foreground: 0 20% 65%;
+  --field-background: 337 24% 13%;
   --shadow-tinted:
     0 1px 0 hsl(0 0% 100% / 0.04),
     0 10px 26px -6px hsl(0 0% 0% / 0.45),
@@ -362,30 +371,31 @@
 .dark.theme-matcha {
   --background: 120 22% 10%;
   --foreground: 86 28% 92%;
-  --card: 120 20% 13%;
+  --card: 120 20% 17%;
   --card-foreground: 86 28% 92%;
-  --card-border: 86 16% 28%;
-  --popover: 120 20% 13%;
+  --card-border: 86 16% 36%;
+  --popover: 120 20% 17%;
   --popover-foreground: 86 28% 92%;
-  --popover-border: 86 16% 28%;
+  --popover-border: 86 16% 36%;
   --primary: 120 28% 52%;
   --primary-foreground: 120 22% 10%;
-  --secondary: 120 24% 42%;
+  --secondary: 120 24% 48%;
   --secondary-foreground: 86 28% 92%;
-  --muted: 120 16% 17%;
-  --muted-foreground: 86 20% 68%;
-  --accent: 120 18% 19%;
+  --muted: 120 16% 21%;
+  --muted-foreground: 86 20% 75%;
+  --accent: 120 18% 23%;
   --accent-foreground: 120 28% 56%;
   --destructive: 0 72% 55%;
   --destructive-foreground: 0 0% 100%;
-  --border: 86 12% 26%;
-  --border-strong: 86 14% 34%;
-  --input: 86 12% 26%;
+  --border: 86 12% 36%;
+  --border-strong: 86 14% 43%;
+  --input: 86 12% 36%;
   --ring: 120 28% 52%;
-  --surface-subtle: 120 16% 16%;
-  --surface-accent: 120 22% 17%;
-  --foreground-subtle: 86 18% 72%;
-  --placeholder-foreground: 86 16% 58%;
+  --surface-subtle: 120 16% 20%;
+  --surface-accent: 120 22% 21%;
+  --foreground-subtle: 86 18% 77%;
+  --placeholder-foreground: 86 16% 65%;
+  --field-background: 120 20% 12%;
   --shadow-tinted:
     0 1px 0 hsl(0 0% 100% / 0.04),
     0 10px 26px -6px hsl(0 0% 0% / 0.45),
@@ -395,30 +405,31 @@
 .dark.theme-lavender {
   --background: 264 28% 11%;
   --foreground: 262 35% 93%;
-  --card: 264 24% 14%;
+  --card: 264 24% 17%;
   --card-foreground: 262 35% 93%;
-  --card-border: 262 18% 30%;
-  --popover: 264 24% 14%;
+  --card-border: 262 18% 36%;
+  --popover: 264 24% 17%;
   --popover-foreground: 262 35% 93%;
-  --popover-border: 262 18% 30%;
+  --popover-border: 262 18% 36%;
   --primary: 256 38% 68%;
   --primary-foreground: 264 28% 11%;
-  --secondary: 260 28% 52%;
+  --secondary: 260 28% 56%;
   --secondary-foreground: 262 35% 93%;
-  --muted: 264 18% 18%;
-  --muted-foreground: 262 24% 72%;
-  --accent: 264 20% 20%;
+  --muted: 264 18% 21%;
+  --muted-foreground: 262 24% 75%;
+  --accent: 264 20% 23%;
   --accent-foreground: 256 38% 72%;
   --destructive: 0 72% 55%;
   --destructive-foreground: 0 0% 100%;
-  --border: 262 14% 28%;
-  --border-strong: 262 16% 36%;
-  --input: 262 14% 28%;
+  --border: 262 14% 36%;
+  --border-strong: 262 16% 43%;
+  --input: 262 14% 36%;
   --ring: 256 38% 68%;
-  --surface-subtle: 264 18% 17%;
-  --surface-accent: 256 22% 18%;
-  --foreground-subtle: 262 22% 74%;
-  --placeholder-foreground: 262 18% 60%;
+  --surface-subtle: 264 18% 20%;
+  --surface-accent: 256 22% 21%;
+  --foreground-subtle: 262 22% 77%;
+  --placeholder-foreground: 262 18% 65%;
+  --field-background: 264 24% 13%;
   --shadow-tinted:
     0 1px 0 hsl(0 0% 100% / 0.04),
     0 10px 26px -6px hsl(0 0% 0% / 0.45),
@@ -428,30 +439,31 @@
 .dark.theme-minimal {
   --background: 0 0% 9%;
   --foreground: 0 0% 94%;
-  --card: 0 0% 12%;
+  --card: 0 0% 17%;
   --card-foreground: 0 0% 94%;
-  --card-border: 0 0% 28%;
-  --popover: 0 0% 12%;
+  --card-border: 0 0% 36%;
+  --popover: 0 0% 17%;
   --popover-foreground: 0 0% 94%;
-  --popover-border: 0 0% 28%;
+  --popover-border: 0 0% 36%;
   --primary: 0 0% 88%;
   --primary-foreground: 0 0% 9%;
-  --secondary: 0 0% 55%;
+  --secondary: 0 0% 59%;
   --secondary-foreground: 0 0% 98%;
-  --muted: 0 0% 16%;
-  --muted-foreground: 0 0% 68%;
-  --accent: 0 0% 18%;
+  --muted: 0 0% 21%;
+  --muted-foreground: 0 0% 75%;
+  --accent: 0 0% 23%;
   --accent-foreground: 0 0% 92%;
   --destructive: 0 72% 55%;
   --destructive-foreground: 0 0% 100%;
-  --border: 0 0% 26%;
-  --border-strong: 0 0% 34%;
-  --input: 0 0% 26%;
+  --border: 0 0% 36%;
+  --border-strong: 0 0% 43%;
+  --input: 0 0% 36%;
   --ring: 0 0% 88%;
-  --surface-subtle: 0 0% 15%;
-  --surface-accent: 0 0% 17%;
-  --foreground-subtle: 0 0% 72%;
-  --placeholder-foreground: 0 0% 58%;
+  --surface-subtle: 0 0% 20%;
+  --surface-accent: 0 0% 21%;
+  --foreground-subtle: 0 0% 77%;
+  --placeholder-foreground: 0 0% 65%;
+  --field-background: 0 0% 11%;
   --shadow-tinted:
     0 1px 0 hsl(0 0% 100% / 0.04),
     0 10px 26px -6px hsl(0 0% 0% / 0.5),
@@ -559,4 +571,63 @@
     font-size: var(--text-caption);
     line-height: var(--text-caption--line-height);
   }
+
+  /* Day planner — writable fields (inset on section card, no nested boxes) */
+  .planner-field {
+    border: 1px solid hsl(var(--input));
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    box-shadow: var(--shadow-field);
+    transition:
+      border-color 0.15s ease,
+      box-shadow 0.15s ease;
+  }
+
+  .planner-field::placeholder {
+    color: hsl(var(--placeholder-foreground));
+  }
+
+  .planner-field:hover:not(:disabled):not(:focus) {
+    border-color: hsl(var(--border-strong));
+    box-shadow: var(--shadow-field-focus);
+  }
+
+  .planner-field:focus {
+    outline: none;
+    border-color: hsl(var(--primary) / 0.45);
+    box-shadow:
+      0 0 0 3px hsl(var(--ring) / 0.28),
+      var(--shadow-field-focus);
+  }
+
+  .planner-field-sm {
+    padding: 0.375rem 0.625rem;
+    font-size: var(--text-ui);
+    line-height: var(--text-ui--line-height);
+  }
+
+  .planner-field-lg {
+    padding: 0.75rem 0.75rem;
+    font-size: var(--text-lead);
+    line-height: var(--text-lead--line-height);
+    font-weight: 600;
+  }
+
+  .dark .planner-field {
+    border-color: hsl(var(--border-strong));
+    background-color: hsl(var(--field-background, var(--background)));
+  }
+
+  .dark .planner-field:hover:not(:disabled):not(:focus) {
+    border-color: hsl(var(--border-strong));
+  }
+}
+
+.dark {
+  --shadow-field:
+    0 1px 3px hsl(0 0% 0% / 0.38),
+    0 1px 0 hsl(0 0% 100% / 0.06) inset;
+  --shadow-field-focus:
+    0 2px 6px hsl(0 0% 0% / 0.45),
+    0 1px 0 hsl(0 0% 100% / 0.07) inset;
 }

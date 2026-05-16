@@ -1,4 +1,5 @@
 import { PlannerSection } from "@/components/PlannerSection";
+import { plannerFieldClass } from "@/lib/planner-field";
 
 interface BrainDumpProps {
   text: string;
@@ -22,7 +23,7 @@ export function BrainDump({ text, onChange }: BrainDumpProps) {
         placeholder="Thoughts, ideas, loose ends…"
         data-testid="brain-dump-input"
         rows={5}
-        className="type-body scrollbar-hide w-full resize-none rounded-lg border border-border bg-background px-3 py-3 focus:outline-none focus:ring-2 focus:ring-ring motion-reduce:transition-none"
+        className={plannerFieldClass("md", "type-body scrollbar-hide min-h-[7.5rem] resize-none")}
       />
     </PlannerSection>
   );

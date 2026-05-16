@@ -76,7 +76,11 @@ export function timelineHeightPx(range: DayScheduleRange): number {
 }
 
 export function timelineContentHeightPx(range: DayScheduleRange): number {
-  return timelineHeightPx(range) + TIMELINE_EDGE_INSET_PX * 2;
+  const spanHeight =
+    ((range.endMin - range.startMin) / SLOT_MINUTES) * PX_PER_SLOT + TIMELINE_EDGE_INSET_PX * 2;
+  const endLabelBottom = minuteToTopPx(range.endMin, range) + TIMELINE_EDGE_INSET_PX;
+  const tickHeight = timelineHeightPx(range) + TIMELINE_EDGE_INSET_PX * 2;
+  return Math.max(spanHeight, endLabelBottom, tickHeight);
 }
 
 export function minuteToTopPx(minute: number, range: DayScheduleRange): number {
@@ -108,8 +112,22 @@ export function timelineHourTicks(range: DayScheduleRange): number[] {
   return ticks;
 }
 
+/** Time-rail labels — grid ticks plus configured end time at the bottom. */
+export function timelineRailLabels(
+  range: DayScheduleRange,
+  granularity: ScheduleTimelineGranularity = "halfHour",
+): number[] {
+  const ticks = granularity === "hour" ? timelineHourTicks(range) : timelineTicks(range);
+  const last = ticks[ticks.length - 1];
+  if (last === range.endMin) return ticks;
+  return [...ticks, range.endMin];
+}
+
 export function timelineHourContentHeightPx(range: DayScheduleRange): number {
-  return timelineHourTicks(range).length * PX_PER_HOUR + TIMELINE_HOUR_EDGE_INSET_PX * 2;
+  const spanHeight =
+    ((range.endMin - range.startMin) / 60) * PX_PER_HOUR + TIMELINE_HOUR_EDGE_INSET_PX * 2;
+  const endLabelBottom = minuteToTopPxHourly(range.endMin, range) + TIMELINE_HOUR_EDGE_INSET_PX;
+  return Math.max(spanHeight, endLabelBottom);
 }
 
 export function minuteToTopPxHourly(minute: number, range: DayScheduleRange): number {

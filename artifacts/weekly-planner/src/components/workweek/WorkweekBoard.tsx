@@ -34,8 +34,8 @@ export function WorkweekBoard({ anchorDateStr, range, onOpenDay }: WorkweekBoard
       data-testid="workweek-board"
     >
       <div className="scrollbar-hide flex min-h-0 w-full flex-1 overflow-x-auto overflow-y-auto">
-        <div className="flex min-h-full w-full min-w-max gap-3 pb-1">
-          <div className="sticky left-0 z-10 flex shrink-0 flex-col self-stretch">
+        <div className="flex w-full min-w-max items-start gap-3 pb-3">
+          <div className="sticky left-0 z-10 flex shrink-0 flex-col">
             <div
               className={cn("shrink-0", WEEK_RAIL_TOP_SPACER_CLASS)}
               style={{ height: RAIL_TOP_SPACER }}
@@ -43,7 +43,7 @@ export function WorkweekBoard({ anchorDateStr, range, onOpenDay }: WorkweekBoard
             />
             <div
               className={cn(
-                "flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-border",
+                "shrink-0 overflow-hidden rounded-xl border border-border",
                 WEEK_SCHEDULE_SURFACE_CLASS,
               )}
             >

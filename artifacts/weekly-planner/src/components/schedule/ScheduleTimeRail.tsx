@@ -27,7 +27,7 @@ export function ScheduleTimeRail({
       style={{ height: timeline.gridHeightPx }}
       aria-hidden
     >
-      {timeline.ticks.map((m) => (
+      {(timeline.railLabels ?? timeline.ticks).map((m) => (
         <div
           key={m}
           className="pointer-events-none absolute right-0 left-0 flex justify-end pr-1.5 sm:pr-2"

@@ -2,6 +2,7 @@ import { motion, useReducedMotion } from "framer-motion";
 import { CheckCircle2, Circle } from "lucide-react";
 import { tasteSpringToggle, tasteTransition } from "@/lib/motion";
 import { PlannerSection } from "@/components/PlannerSection";
+import { plannerFieldClass } from "@/lib/planner-field";
 import { cn } from "@/lib/utils";
 
 interface MainFocusSectionProps {
@@ -46,11 +47,9 @@ export function MainFocusSection({
             data-testid="input-main-focus"
             disabled={completed}
             className={cn(
-              "w-full rounded-md border border-border bg-background py-3 pl-3 pr-12 text-lead font-semibold shadow-sm transition-colors",
-              "placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring motion-reduce:transition-none sm:pr-14",
-              completed
-                ? "cursor-default border-border bg-surface-subtle text-foreground-subtle line-through"
-                : "text-foreground",
+              plannerFieldClass("lg", "pr-12 sm:pr-14"),
+              completed &&
+                "cursor-default border-border bg-surface-subtle text-foreground-subtle line-through shadow-none hover:border-border focus:border-border focus:shadow-none",
             )}
           />
           <button

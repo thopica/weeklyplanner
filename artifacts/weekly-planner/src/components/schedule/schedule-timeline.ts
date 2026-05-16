@@ -10,6 +10,7 @@ import {
   minuteToTopPxHourly,
   timelineContentHeightPx,
   timelineHourContentHeightPx,
+  timelineRailLabels,
   timelineHourTicks,
   timelineTicks,
   type ScheduleTimelineGranularity,
@@ -19,6 +20,7 @@ export function useScheduleTimeline(range: DayScheduleRange, granularity: Schedu
   const isHour = granularity === "hour";
   return {
     ticks: isHour ? timelineHourTicks(range) : timelineTicks(range),
+    railLabels: timelineRailLabels(range, granularity),
     gridHeightPx: isHour ? timelineHourContentHeightPx(range) : timelineContentHeightPx(range),
     minuteToTop: (minute: number) =>
       isHour ? minuteToTopPxHourly(minute, range) : minuteToTopPx(minute, range),

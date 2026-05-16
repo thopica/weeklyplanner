@@ -17,6 +17,7 @@ import { Trash2, Plus, CalendarDays } from "lucide-react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { tasteSpringLayout, tasteTransition } from "@/lib/motion";
 import { PlannerSection } from "@/components/PlannerSection";
+import { plannerFieldClass } from "@/lib/planner-field";
 import { cn } from "@/lib/utils";
 
 interface TaskListProps {
@@ -120,7 +121,7 @@ export function TaskList({
         ) : null
       }
     >
-      <div className="overflow-hidden rounded-lg border border-border bg-surface-subtle">
+      <div>
         <AnimatePresence mode="popLayout">
           {tasks.length === 0 && (
             <motion.p
@@ -129,7 +130,7 @@ export function TaskList({
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={listTransition}
-              className="type-ui px-3 py-4 text-muted-foreground"
+              className="type-ui py-3 text-muted-foreground"
             >
               Nothing here yet. Add what matters for today.
             </motion.p>
@@ -143,7 +144,7 @@ export function TaskList({
               exit={reduceMotion ? { opacity: 0 } : { opacity: 0, x: -8 }}
               transition={listTransition}
               className={cn(
-                "group flex items-center gap-3 px-3 py-2.5",
+                "group flex items-center gap-3 py-2.5",
                 index > 0 && "border-t border-border-strong",
               )}
               data-testid={`task-item-${task.id}`}
@@ -164,10 +165,9 @@ export function TaskList({
                 onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
                 data-testid={`task-input-${task.id}`}
                 className={cn(
-                  "type-ui min-w-0 flex-1 border-none bg-transparent focus:outline-none",
-                  task.completed
-                    ? "font-medium text-foreground-subtle line-through"
-                    : "text-foreground",
+                  plannerFieldClass("sm", "min-w-0 flex-1"),
+                  task.completed &&
+                    "border-border/60 bg-surface-subtle/80 font-medium text-foreground-subtle line-through shadow-none hover:border-border/60 focus:border-border/60 focus:shadow-none",
                 )}
               />
               {onMoveTask ? (
@@ -181,7 +181,7 @@ export function TaskList({
                       ? `Move task to another day: ${task.text}`
                       : "Move task to another day"
                   }
-                  className="h-7 w-7 shrink-0 text-muted-foreground opacity-0 transition-opacity hover:text-foreground group-hover:opacity-100 focus-visible:opacity-100"
+                  className="h-7 w-7 shrink-0 text-muted-foreground/70 transition-opacity hover:text-foreground group-hover:text-muted-foreground focus-visible:text-muted-foreground"
                 >
                   <CalendarDays className="h-3.5 w-3.5" strokeWidth={2} />
                 </Button>
@@ -202,24 +202,29 @@ export function TaskList({
 
         <form
           onSubmit={handleAddTask}
-          className="flex gap-2 border-t border-border-strong bg-card px-3 py-2.5"
+          className="flex items-center gap-3 border-t border-border-strong pt-2.5"
         >
+          <Button
+            type="submit"
+            size="icon"
+            data-testid={`button-add-task-${accentColor}`}
+            aria-label="Add task"
+            className="h-5 w-5 shrink-0 rounded-full bg-secondary text-secondary-foreground hover:bg-secondary/90"
+          >
+            <Plus className="h-3.5 w-3.5" strokeWidth={2.5} />
+          </Button>
           <input
             type="text"
             value={newTaskText}
             onChange={(e) => setNewTaskText(e.target.value)}
             placeholder="Add a task…"
             data-testid={`input-new-task-${accentColor}`}
-            className="type-ui min-w-0 flex-1 rounded-md border border-border bg-background px-3 py-2 focus:outline-none focus:ring-2 focus:ring-ring motion-reduce:transition-none"
+            className={plannerFieldClass("sm", "min-w-0 flex-1")}
           />
-          <Button
-            type="submit"
-            size="icon"
-            data-testid={`button-add-task-${accentColor}`}
-            className="h-9 w-9 shrink-0 bg-secondary text-secondary-foreground hover:bg-secondary/90"
-          >
-            <Plus className="h-4 w-4" strokeWidth={2} />
-          </Button>
+          {onMoveTask ? (
+            <span className="h-7 w-7 shrink-0" aria-hidden />
+          ) : null}
+          <span className="h-7 w-7 shrink-0" aria-hidden />
         </form>
       </div>
 
