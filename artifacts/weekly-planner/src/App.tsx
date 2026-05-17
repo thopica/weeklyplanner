@@ -1,4 +1,5 @@
 import { Switch, Route, Router as WouterRouter } from "wouter";
+import { useHashLocation } from "wouter/use-hash-location";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
@@ -29,6 +30,8 @@ function Router() {
   );
 }
 
+const isStandalone = import.meta.env.VITE_STANDALONE === "true";
+
 function App() {
   useEffect(() => {
     initAppearance();
@@ -37,7 +40,10 @@ function App() {
 
   return (
     <TooltipProvider>
-      <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+      <WouterRouter
+        hook={isStandalone ? useHashLocation : undefined}
+        base={isStandalone ? "" : import.meta.env.BASE_URL.replace(/\/$/, "")}
+      >
         <PomodoroProvider>
           <Router />
         </PomodoroProvider>

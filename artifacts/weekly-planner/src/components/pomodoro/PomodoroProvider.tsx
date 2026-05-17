@@ -45,9 +45,11 @@ export function PomodoroProvider({ children }: { children: ReactNode }) {
       toast({
         title: `${phaseLabel(phase)} complete`,
         description:
-          nextPhase === "focus"
-            ? "Time to focus again."
-            : `Up next: ${phaseLabel(nextPhase).toLowerCase()}.`,
+          phase === "focus"
+            ? "Time for a break — choose short or long when you're ready."
+            : nextPhase === "focus"
+              ? "Time to focus again."
+              : `Up next: ${phaseLabel(nextPhase).toLowerCase()}.`,
       });
     },
   });

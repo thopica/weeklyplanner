@@ -43,17 +43,27 @@ export function PomodoroFocusOverlay({
     togglePlayPause,
     selectPhase,
     setSessionDuration,
+    chooseBreak,
     skipInterstitial,
     resetSession,
   } = usePomodoro();
 
-  const phaseTitle = interstitial
-    ? `Up next: ${phaseLabel(interstitial.nextPhase)}`
-    : phaseLabel(phase);
+  const breakChoice = interstitial?.kind === "breakChoice";
+  const upNext = interstitial?.kind === "upNext" ? interstitial : null;
+
+  const phaseTitle = breakChoice
+    ? "Time for a break"
+    : upNext
+      ? `Up next: ${phaseLabel(upNext.nextPhase)}`
+      : phaseLabel(phase);
 
   const dashOffset = CIRCUMFERENCE * (1 - progress);
   const urgent =
-    !interstitial && status === "running" && remainingSeconds > 0 && remainingSeconds <= 10;
+    !breakChoice &&
+    !upNext &&
+    status === "running" &&
+    remainingSeconds > 0 &&
+    remainingSeconds <= 10;
 
   const overlayRef = useFocusTrap(true, onExit);
   const mainFocusId = "pomodoro-main-focus";
@@ -73,7 +83,7 @@ export function PomodoroFocusOverlay({
       role="dialog"
       aria-modal="true"
       aria-labelledby="pomodoro-focus-title"
-      aria-describedby={mainFocusText && phase === "focus" && !interstitial ? mainFocusId : undefined}
+      aria-describedby={mainFocusText && phase === "focus" && !breakChoice && !upNext ? mainFocusId : undefined}
       data-testid="pomodoro-overlay"
     >
       <motion.div
@@ -128,7 +138,8 @@ export function PomodoroFocusOverlay({
           }
         />
 
-        <div
+        {!breakChoice && (
+        <motion.div
           className="mb-6 flex w-full max-w-md rounded-full border border-border bg-card/60 p-1 backdrop-blur-sm"
           role="tablist"
           aria-label="Pomodoro phase"
@@ -153,9 +164,10 @@ export function PomodoroFocusOverlay({
               {label}
             </button>
           ))}
-        </div>
+        </motion.div>
+        )}
 
-        {!canSelectPhase && status === "running" && (
+        {!breakChoice && !canSelectPhase && status === "running" && (
           <p className="type-caption -mt-4 mb-4 text-muted-foreground">
             Pause to switch phase or edit time
           </p>
@@ -172,7 +184,13 @@ export function PomodoroFocusOverlay({
           {phaseTitle}
         </motion.p>
 
-        {mainFocusText && phase === "focus" && !interstitial && (
+        {breakChoice && (
+          <p className="type-ui mb-6 max-w-sm text-center text-foreground/80">
+            Choose a break type, then press Start when you&apos;re ready.
+          </p>
+        )}
+
+        {mainFocusText && phase === "focus" && !breakChoice && !upNext && (
           <p
             id={mainFocusId}
             className="type-ui mb-6 max-w-md text-center text-foreground/80"
@@ -222,9 +240,13 @@ export function PomodoroFocusOverlay({
             className="absolute inset-0 flex flex-col items-center justify-center gap-1"
             aria-live="polite"
           >
-            {interstitial ? (
+            {breakChoice ? (
+              <span className="max-w-[14rem] text-center font-serif text-3xl font-semibold leading-tight tracking-tight text-foreground sm:max-w-none sm:text-4xl">
+                Time for a break
+              </span>
+            ) : upNext ? (
               <span className="font-serif text-6xl font-semibold tabular-nums tracking-tight sm:text-7xl">
-                {interstitial.secondsLeft}
+                {upNext.secondsLeft}
               </span>
             ) : (
               <>
@@ -235,7 +257,7 @@ export function PomodoroFocusOverlay({
                 />
                 {canEditDuration && (
                   <span className="type-caption text-muted-foreground">
-                    Tap to edit
+                    Tap to edit (up to 4 hours)
                   </span>
                 )}
               </>
@@ -245,7 +267,27 @@ export function PomodoroFocusOverlay({
       </main>
 
       <footer className="relative z-10 flex shrink-0 flex-wrap items-center justify-center gap-2 px-4 pb-8 sm:gap-3">
-        {interstitial ? (
+        {breakChoice ? (
+          <>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => chooseBreak("shortBreak")}
+              data-testid="button-pomodoro-short-break"
+              className="min-w-36"
+            >
+              Short break
+            </Button>
+            <Button
+              type="button"
+              onClick={() => chooseBreak("longBreak")}
+              data-testid="button-pomodoro-long-break"
+              className="min-w-36"
+            >
+              Long break
+            </Button>
+          </>
+        ) : upNext ? (
           <Button type="button" onClick={skipInterstitial} className="min-w-40">
             Start now
             <SkipForward className="ml-2 h-4 w-4" />

@@ -12,10 +12,10 @@ import {
 
 export type PomodoroStatus = "idle" | "running" | "paused";
 
-export type PomodoroInterstitial = {
-  nextPhase: PomodoroPhase;
-  secondsLeft: number;
-} | null;
+export type PomodoroInterstitial =
+  | { kind: "breakChoice" }
+  | { kind: "upNext"; nextPhase: PomodoroPhase; secondsLeft: number }
+  | null;
 
 export type SessionDurations = Partial<Record<PomodoroPhase, number>>;
 
@@ -98,9 +98,14 @@ export function usePomodoroTimer(options: UsePomodoroTimerOptions = {}) {
     }
     const next = nextPhaseAfter(current, nextCompleted, settings);
     onPhaseCompleteRef.current?.(current, next);
-    setInterstitial({ nextPhase: next, secondsLeft: 3 });
+    if (current === "focus") {
+      setInterstitial({ kind: "breakChoice" });
+    } else {
+      setInterstitial({ kind: "upNext", nextPhase: next, secondsLeft: 3 });
+    }
     setStatus("paused");
     setEndTimestamp(null);
+    setRemainingSeconds(0);
   }, [phase, completedFocusSessions, settings]);
 
   useEffect(() => {
@@ -115,14 +120,16 @@ export function usePomodoroTimer(options: UsePomodoroTimerOptions = {}) {
   }, [status, endTimestamp, remainingSeconds, completePhase]);
 
   useEffect(() => {
-    if (!interstitial) return;
+    if (!interstitial || interstitial.kind !== "upNext") return;
     if (interstitial.secondsLeft <= 0) {
       beginPhase(interstitial.nextPhase);
       return;
     }
     const id = window.setTimeout(() => {
       setInterstitial((prev) =>
-        prev ? { ...prev, secondsLeft: prev.secondsLeft - 1 } : null,
+        prev && prev.kind === "upNext"
+          ? { ...prev, secondsLeft: prev.secondsLeft - 1 }
+          : null,
       );
     }, 1000);
     return () => window.clearTimeout(id);
@@ -187,8 +194,21 @@ export function usePomodoroTimer(options: UsePomodoroTimerOptions = {}) {
     [phase, status, interstitial, pause],
   );
 
+  const chooseBreak = useCallback(
+    (breakPhase: "shortBreak" | "longBreak") => {
+      if (!interstitial || interstitial.kind !== "breakChoice") return;
+      const duration = getPhaseDurationSeconds(breakPhase);
+      setPhase(breakPhase);
+      setRemainingSeconds(duration);
+      setStatus("paused");
+      setEndTimestamp(null);
+      setInterstitial(null);
+    },
+    [interstitial, getPhaseDurationSeconds],
+  );
+
   const skipInterstitial = useCallback(() => {
-    if (!interstitial) return;
+    if (!interstitial || interstitial.kind !== "upNext") return;
     beginPhase(interstitial.nextPhase);
   }, [interstitial, beginPhase]);
 
@@ -237,6 +257,7 @@ export function usePomodoroTimer(options: UsePomodoroTimerOptions = {}) {
     pause,
     selectPhase,
     setSessionDuration,
+    chooseBreak,
     skipInterstitial,
     resetSession,
     refreshSettings,

@@ -68,8 +68,9 @@ export function PomodoroCountdownEditor({
         }}
         aria-label="Edit timer duration"
         data-testid="pomodoro-countdown-input"
+        placeholder="25:00 or 2:00:00"
         className={cn(
-          "w-[5.5ch] min-w-[5.5ch] border-b-2 border-primary bg-transparent text-center font-serif text-6xl font-semibold tabular-nums tracking-tight outline-none sm:text-7xl",
+          "min-w-[9ch] border-b-2 border-primary bg-transparent px-1 text-center font-serif text-6xl font-semibold tabular-nums tracking-tight outline-none sm:text-7xl",
           className,
         )}
       />

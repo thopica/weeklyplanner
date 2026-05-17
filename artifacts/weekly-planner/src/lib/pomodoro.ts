@@ -17,7 +17,8 @@ export const DEFAULT_POMODORO_SETTINGS: PomodoroSettings = {
 };
 
 const MIN_MINUTES = 1;
-const MAX_MINUTES = 90;
+/** Up to 4 hours for custom focus / break sessions. */
+const MAX_MINUTES = 240;
 const MIN_SESSIONS = 2;
 const MAX_SESSIONS = 8;
 
@@ -70,9 +71,13 @@ export function phaseDurationSeconds(
 
 export function formatCountdown(totalSeconds: number): string {
   const s = Math.max(0, Math.ceil(totalSeconds));
-  const m = Math.floor(s / 60);
+  const hours = Math.floor(s / 3600);
+  const minutes = Math.floor((s % 3600) / 60);
   const sec = s % 60;
-  return `${m}:${String(sec).padStart(2, "0")}`;
+  if (hours > 0) {
+    return `${hours}:${String(minutes).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
+  }
+  return `${minutes}:${String(sec).padStart(2, "0")}`;
 }
 
 const MIN_SESSION_SECONDS = 60;
@@ -86,14 +91,26 @@ export function clampSessionSeconds(seconds: number): number {
   );
 }
 
-/** Parse MM:SS or M:SS input into total seconds, or null if invalid. */
+/** Parse H:MM:SS or M:SS input into total seconds, or null if invalid. */
 export function parseCountdownInput(value: string): number | null {
   const trimmed = value.trim();
   if (!trimmed) return null;
-  const match = trimmed.match(/^(\d{1,2}):(\d{2})$/);
-  if (!match) return null;
-  const minutes = Number(match[1]);
-  const seconds = Number(match[2]);
+
+  const hms = trimmed.match(/^(\d{1,2}):(\d{2}):(\d{2})$/);
+  if (hms) {
+    const hours = Number(hms[1]);
+    const minutes = Number(hms[2]);
+    const seconds = Number(hms[3]);
+    if (minutes > 59 || seconds > 59) return null;
+    const total = hours * 3600 + minutes * 60 + seconds;
+    if (total < MIN_SESSION_SECONDS || total > MAX_SESSION_SECONDS) return null;
+    return total;
+  }
+
+  const ms = trimmed.match(/^(\d{1,3}):(\d{2})$/);
+  if (!ms) return null;
+  const minutes = Number(ms[1]);
+  const seconds = Number(ms[2]);
   if (seconds > 59) return null;
   const total = minutes * 60 + seconds;
   if (total < MIN_SESSION_SECONDS || total > MAX_SESSION_SECONDS) return null;
