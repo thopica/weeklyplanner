@@ -6,10 +6,7 @@ import { getDayTaskSummary, isMeaningfulTask, mergeDayTasks } from "@/lib/tasks"
 import { IncompleteDayIndicator } from "@/components/IncompleteDayIndicator";
 import type { DayScheduleRange } from "@/lib/schedule";
 import { WorkweekScheduleColumn } from "@/components/schedule/WorkweekScheduleColumn";
-import {
-  WEEK_SCHEDULE_SURFACE_CLASS,
-  WORKWEEK_SUMMARY_HEIGHT,
-} from "@/lib/workweek";
+import { WEEK_SCHEDULE_SURFACE_CLASS } from "@/lib/workweek";
 import { cn } from "@/lib/utils";
 
 interface WorkweekDayColumnProps {
@@ -52,7 +49,7 @@ export function WorkweekDayColumn({
 
   return (
     <article
-      className="flex min-w-[8.75rem] flex-1 basis-0 flex-col overflow-hidden rounded-xl border border-border bg-card sm:min-w-[9.5rem]"
+      className="flex min-w-[7rem] flex-1 basis-0 flex-col overflow-hidden rounded-xl border border-border bg-card"
       aria-labelledby={`workweek-day-${dateStr}`}
       data-testid={`workweek-column-${dateStr}`}
     >
@@ -61,7 +58,7 @@ export function WorkweekDayColumn({
         id={`workweek-day-${dateStr}`}
         onClick={() => onOpenDay(dateStr)}
         className={cn(
-          "flex shrink-0 flex-col justify-center border-b border-border px-4 py-3 text-left transition-colors",
+          "flex shrink-0 flex-col justify-center border-b border-border px-3 py-2.5 text-left transition-colors 2xl:px-4 2xl:py-3",
           "hover:bg-accent/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
           isToday && "bg-primary text-primary-foreground hover:bg-primary/90",
         )}
@@ -73,7 +70,8 @@ export function WorkweekDayColumn({
               isToday ? "text-primary-foreground/85" : "text-muted-foreground",
             )}
           >
-            {format(date, "EEEE")}
+            <span className="2xl:hidden">{format(date, "EEE")}</span>
+            <span className="hidden 2xl:inline">{format(date, "EEEE")}</span>
           </span>
           <div className="flex items-center gap-1.5">
             <IncompleteDayIndicator
@@ -101,11 +99,8 @@ export function WorkweekDayColumn({
         </div>
       </button>
 
-      <div
-        className="shrink-0 overflow-y-auto border-b border-border px-4 py-3"
-        style={{ height: WORKWEEK_SUMMARY_HEIGHT }}
-      >
-        <div className="space-y-4">
+      <div className="h-32 shrink-0 overflow-y-auto border-b border-border px-3 py-2.5 2xl:h-[9.5rem] 2xl:px-4 2xl:py-3">
+        <div className="space-y-3 2xl:space-y-4">
           <SummaryBlock label="Focus">
             {focus ? (
               <p
@@ -131,7 +126,7 @@ export function WorkweekDayColumn({
                   <li
                     key={task.id}
                     className={cn(
-                      "flex min-h-10 items-start gap-2 px-3 py-2",
+                      "flex min-h-10 items-start gap-2 px-2 py-2 2xl:px-3",
                       index > 0 && "border-t border-border",
                     )}
                   >

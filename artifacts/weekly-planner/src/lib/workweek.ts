@@ -10,6 +10,9 @@ export const WORKWEEK_DAY_HEADER_HEIGHT = "4.25rem";
 /** Fixed focus + tasks panel height — equal across all columns; scrolls inside when needed. */
 export const WORKWEEK_SUMMARY_HEIGHT = "9.5rem";
 
+/** Compact summary height below xl (~13" laptops). */
+export const WORKWEEK_SUMMARY_HEIGHT_COMPACT = "8rem";
+
 /** Week view: focus/tasks vs schedule (calendar) surfaces. */
 export const WEEK_SUMMARY_SURFACE_CLASS = "bg-card";
 export const WEEK_SCHEDULE_SURFACE_CLASS = "bg-surface-subtle";
