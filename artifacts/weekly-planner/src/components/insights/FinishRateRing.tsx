@@ -1,3 +1,4 @@
+import { useReducedMotion } from "framer-motion";
 import { cn } from "@/lib/utils";
 
 interface FinishRateRingProps {
@@ -11,6 +12,7 @@ export function FinishRateRing({
   size = 88,
   className,
 }: FinishRateRingProps) {
+  const reduceMotion = useReducedMotion();
   const stroke = 6;
   const radius = (size - stroke) / 2;
   const circumference = 2 * Math.PI * radius;
@@ -46,12 +48,15 @@ export function FinishRateRing({
           strokeLinecap="round"
           strokeDasharray={circumference}
           strokeDashoffset={offset}
-          className="text-primary transition-[stroke-dashoffset] duration-500"
+          className={cn(
+            "text-primary transition-[stroke-dashoffset]",
+            reduceMotion ? "duration-0" : "duration-500",
+          )}
         />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
         <span className="text-title font-semibold tabular-nums text-foreground">
-          {value === null ? "—" : `${pct}%`}
+          {value === null ? "N/A" : `${pct}%`}
         </span>
         <span className="type-caption text-muted-foreground">done</span>
       </div>

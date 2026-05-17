@@ -2,6 +2,7 @@ import { Link } from "wouter";
 import type { HabitInsightRow, HabitInsights } from "@/lib/insights";
 import { habitHighlightIds } from "@/lib/insight-messages";
 import { HabitStreakVisual } from "@/components/insights/HabitStreakVisual";
+import { InsightsPanelShell } from "@/components/insights/InsightsPanelShell";
 import { cn } from "@/lib/utils";
 
 interface HabitsMomentumPanelProps {
@@ -19,7 +20,7 @@ function HabitCard({
 
   return (
     <article
-      className="rounded-lg border border-border bg-surface-subtle px-3 py-3 sm:px-4"
+      className="px-0 py-4 first:pt-0 last:pb-0 sm:px-0"
       data-testid={`habit-insight-${habit.id}`}
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -72,21 +73,13 @@ export function HabitsMomentumPanel({ habits }: HabitsMomentumPanelProps) {
   const { strongestId, needsAttentionId } = habitHighlightIds(habits);
 
   return (
-    <section
-      className="overflow-hidden rounded-xl border border-border bg-card"
-      aria-labelledby="insights-habits-heading"
-      data-testid="insights-habits-panel"
+    <InsightsPanelShell
+      headingId="insights-habits-heading"
+      title="Habit momentum"
+      description="Streaks and consistency. Each square is one day."
+      testId="insights-habits-panel"
     >
-      <header className="border-b border-border px-4 py-3 sm:px-5">
-        <h2 id="insights-habits-heading" className="type-section-title text-foreground">
-          Habit momentum
-        </h2>
-        <p className="type-section-desc mt-0.5 text-muted-foreground">
-          Streaks and consistency — each square is one day.
-        </p>
-      </header>
-
-      <div className="space-y-3 px-4 py-3 sm:px-5">
+      <div className="divide-y divide-border px-4 py-3 sm:px-5">
         {noHabits ? (
           <p className="type-ui py-4 text-muted-foreground">
             No habits configured. Add habits in{" "}
@@ -107,6 +100,6 @@ export function HabitsMomentumPanel({ habits }: HabitsMomentumPanelProps) {
           })
         )}
       </div>
-    </section>
+    </InsightsPanelShell>
   );
 }

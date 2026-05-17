@@ -4,8 +4,8 @@ import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { toast } from "@/hooks/use-toast";
 import {
+  buildPlannerBackup,
   clearPlannerData,
-  getPlannerData,
   importPlannerBackup,
   loadDemoData,
 } from "@/lib/storage";
@@ -49,8 +49,8 @@ export function DataManagementSettings({
   };
 
   const handleExport = () => {
-    const data = getPlannerData();
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    const backup = buildPlannerBackup();
+    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -71,7 +71,7 @@ export function DataManagementSettings({
           onDataReset();
           toast({
             title: "Backup imported",
-            description: "Your planner data was restored from the file.",
+            description: "Your backup was restored from the file.",
           });
         } else {
           toast({
@@ -147,8 +147,8 @@ export function DataManagementSettings({
         </Button>
 
         <p className="mt-2 text-center text-xs text-muted-foreground">
-          All data is stored locally in your browser. Clearing planner data keeps your theme and
-          Pomodoro preferences.
+          Export includes all days, tasks, habits, calendar hours, theme, layout, and Pomodoro
+          settings. Clearing planner data keeps theme and Pomodoro preferences.
         </p>
       </div>
 

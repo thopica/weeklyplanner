@@ -35,6 +35,26 @@ export type ImportBackupResult =
   | StorageWriteResult
   | { ok: false; code: "invalid"; message: string };
 
+/** Full backup format (v1): planner content plus UI and Pomodoro preferences. */
+export const PLANNER_BACKUP_VERSION = 1 as const;
+
+export interface PlannerBackupPreferences {
+  theme: string;
+  colorMode: ColorMode;
+  selectedDate: string;
+  scheduleRange: DayScheduleRange;
+  scheduleVisible: boolean;
+  schedulePaneWidth: number;
+  pomodoro: PomodoroSettings;
+}
+
+export interface PlannerBackupV1 {
+  version: typeof PLANNER_BACKUP_VERSION;
+  exportedAt: string;
+  planner: PlannerData;
+  preferences: PlannerBackupPreferences;
+}
+
 const DATE_KEY_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 function writeLocalStorage(key: string, value: string): StorageWriteResult {
@@ -332,11 +352,130 @@ export function savePlannerData(data: PlannerData): StorageWriteResult {
   return writeLocalStorage(STORAGE_KEYS.PLANNER_DATA, JSON.stringify(data));
 }
 
-/** Validate and persist a backup JSON object. */
+function isPlannerBackupV1(raw: unknown): raw is PlannerBackupV1 {
+  if (typeof raw !== "object" || raw === null) return false;
+  const b = raw as Partial<PlannerBackupV1>;
+  return (
+    b.version === PLANNER_BACKUP_VERSION &&
+    b.planner !== undefined &&
+    typeof b.planner === "object" &&
+    b.planner !== null
+  );
+}
+
+function normalizeBackupPreferences(
+  raw: Partial<PlannerBackupPreferences> | undefined,
+): PlannerBackupPreferences {
+  const scheduleRange =
+    raw?.scheduleRange &&
+    typeof raw.scheduleRange.startMin === "number" &&
+    typeof raw.scheduleRange.endMin === "number"
+      ? clampDayScheduleRange(raw.scheduleRange)
+      : getScheduleRange();
+
+  return {
+    theme: typeof raw?.theme === "string" && raw.theme ? raw.theme : getTheme(),
+    colorMode:
+      raw?.colorMode === "light" ||
+      raw?.colorMode === "dark" ||
+      raw?.colorMode === "system"
+        ? raw.colorMode
+        : getColorMode(),
+    selectedDate:
+      typeof raw?.selectedDate === "string" && DATE_KEY_RE.test(raw.selectedDate)
+        ? raw.selectedDate
+        : getSelectedDate(),
+    scheduleRange,
+    scheduleVisible:
+      typeof raw?.scheduleVisible === "boolean" ? raw.scheduleVisible : getScheduleVisible(),
+    schedulePaneWidth:
+      typeof raw?.schedulePaneWidth === "number"
+        ? clampSchedulePaneWidth(raw.schedulePaneWidth)
+        : getSchedulePaneWidth(),
+    pomodoro: normalizePomodoroSettings(raw?.pomodoro),
+  };
+}
+
+function migratePlannerTimeBlocks(
+  planner: PlannerData,
+  range: DayScheduleRange,
+): PlannerData {
+  const days: Record<string, DayData> = {};
+  for (const [dateStr, day] of Object.entries(planner.days)) {
+    days[dateStr] = {
+      ...day,
+      timeBlocks: migrateTimeBlocks(day.timeBlocks ?? [], range),
+    };
+  }
+  return { ...planner, days };
+}
+
+/** Collect all planner content and local preferences for export. */
+export function buildPlannerBackup(): PlannerBackupV1 {
+  return {
+    version: PLANNER_BACKUP_VERSION,
+    exportedAt: new Date().toISOString(),
+    planner: getPlannerData(),
+    preferences: {
+      theme: getTheme(),
+      colorMode: getColorMode(),
+      selectedDate: getSelectedDate(),
+      scheduleRange: getScheduleRange(),
+      scheduleVisible: getScheduleVisible(),
+      schedulePaneWidth: getSchedulePaneWidth(),
+      pomodoro: getPomodoroSettings(),
+    },
+  };
+}
+
+function applyBackupPreferences(prefs: PlannerBackupPreferences): StorageWriteResult {
+  const rangeResult = writeLocalStorage(
+    STORAGE_KEYS.SCHEDULE_RANGE,
+    JSON.stringify(prefs.scheduleRange),
+  );
+  if (!rangeResult.ok) return rangeResult;
+
+  const results: StorageWriteResult[] = [
+    saveScheduleVisible(prefs.scheduleVisible),
+    saveSchedulePaneWidth(prefs.schedulePaneWidth),
+    savePomodoroSettings(prefs.pomodoro),
+    saveTheme(prefs.theme),
+    saveColorMode(prefs.colorMode),
+    saveSelectedDate(prefs.selectedDate),
+  ];
+
+  const failed = results.find((r) => !r.ok);
+  return failed ?? { ok: true };
+}
+
+/** Validate and persist a backup JSON object (v1 full backup or legacy planner-only). */
 export function importPlannerBackup(raw: unknown): ImportBackupResult {
   if (typeof raw !== "object" || raw === null) {
     return { ok: false, code: "invalid", message: "Invalid backup file format." };
   }
+
+  if (isPlannerBackupV1(raw)) {
+    const candidate = raw.planner as Partial<PlannerData>;
+    if (
+      !candidate.days ||
+      typeof candidate.days !== "object" ||
+      Array.isArray(candidate.days)
+    ) {
+      return { ok: false, code: "invalid", message: "Invalid backup file format." };
+    }
+
+    const prefs = normalizeBackupPreferences(raw.preferences);
+    const planner = migratePlannerTimeBlocks(
+      normalizePlannerData(candidate),
+      prefs.scheduleRange,
+    );
+
+    const plannerResult = savePlannerData(planner);
+    if (!plannerResult.ok) return plannerResult;
+
+    return applyBackupPreferences(prefs);
+  }
+
   const candidate = raw as Partial<PlannerData>;
   if (
     !candidate.days ||
@@ -345,7 +484,10 @@ export function importPlannerBackup(raw: unknown): ImportBackupResult {
   ) {
     return { ok: false, code: "invalid", message: "Invalid backup file format." };
   }
-  return savePlannerData(normalizePlannerData(candidate));
+
+  const range = getScheduleRange();
+  const planner = migratePlannerTimeBlocks(normalizePlannerData(candidate), range);
+  return savePlannerData(planner);
 }
 
 export function getDayData(dateStr: string): DayData {

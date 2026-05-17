@@ -79,10 +79,7 @@ export function deriveActionableInsights(
       kind: "tasks",
       title:
         sweepStreak >= 3 ? "You're on a roll" : "Nice finishing stretch",
-      body:
-        sweepStreak === 1
-          ? "Every task done yesterday — keep the momentum going."
-          : `${sweepStreak} days in a row with every task done. That's real follow-through.`,
+      body: `${sweepStreak} days in a row with every task done. That's real follow-through.`,
       metric: `${sweepStreak} day${sweepStreak === 1 ? "" : "s"}`,
       priority: 95,
     });
@@ -94,7 +91,7 @@ export function deriveActionableInsights(
       tone: "celebrate",
       kind: "tasks",
       title: "Clear-the-board days",
-      body: `You fully cleared your list on ${tasks.cleanSweepDays} days this period — those days set you up for an easier tomorrow.`,
+      body: `You fully cleared your list on ${tasks.cleanSweepDays} days this period. Those days set you up for an easier tomorrow.`,
       metric: String(tasks.cleanSweepDays),
       priority: 70,
     });
@@ -147,7 +144,7 @@ export function deriveActionableInsights(
         tone: "neutral",
         kind: "momentum",
         title: "Steady planning rhythm",
-        body: `You planned on ${tasks.activePlanningDays} of ${tasks.calendarDays} days — showing up regularly matters more than perfect days.`,
+        body: `You planned on ${tasks.activePlanningDays} of ${tasks.calendarDays} days. Showing up regularly matters more than perfect days.`,
         metric: `${pct}%`,
         priority: 55,
       });
@@ -186,7 +183,7 @@ export function deriveActionableInsights(
       tone: "neutral",
       kind: "tasks",
       title: "Priorities get your attention",
-      body: `High-priority tasks finish at ${tasks.highPriorityFinishRate}% vs ${tasks.generalFinishRate}% for general — your focus lands where it counts.`,
+      body: `High-priority tasks finish at ${tasks.highPriorityFinishRate}% vs ${tasks.generalFinishRate}% for general. Your focus lands where it counts.`,
       priority: 45,
     });
   }
@@ -197,7 +194,7 @@ export function deriveActionableInsights(
       tone: "celebrate",
       kind: "habits",
       title: "Full habit days",
-      body: `${habits.perfectHabitDays} days you hit every habit in this period — that's alignment across your whole routine.`,
+      body: `${habits.perfectHabitDays} days you hit every habit in this period. That's alignment across your whole routine.`,
       metric: String(habits.perfectHabitDays),
       priority: 72,
     });
@@ -209,7 +206,7 @@ export function deriveActionableInsights(
       tone: "celebrate",
       kind: "habits",
       title: "Habit streak going strong",
-      body: `Your best current streak is ${habits.bestCurrentStreak} days — consistency compounds.`,
+      body: `Your best current streak is ${habits.bestCurrentStreak} days. Consistency compounds.`,
       metric: `${habits.bestCurrentStreak} days`,
       priority: 88,
     });
@@ -226,7 +223,7 @@ export function deriveActionableInsights(
         tone: "neutral",
         kind: "habits",
         title: "Where habits shine",
-        body: `${strongest.habit.name} is at ${strongest.hitRate}% this period${strongest.currentStreak > 0 ? ` (${strongest.currentStreak}-day streak)` : ""}. ${weakest.habit.name} is at ${weakest.hitRate}% — a small daily reset could help.`,
+        body: `${strongest.habit.name} is at ${strongest.hitRate}% this period${strongest.currentStreak > 0 ? ` (${strongest.currentStreak}-day streak)` : ""}. ${weakest.habit.name} is at ${weakest.hitRate}%. A small daily reset could help.`,
         href: "/settings",
         hrefLabel: "Habit settings",
         priority: 50,
@@ -255,7 +252,7 @@ export function deriveActionableInsights(
           : "Room to grow",
       body:
         tasks.finishRate >= 80
-          ? `${tasks.finishRate}% of tasks marked done in this period — you're closing loops.`
+          ? `${tasks.finishRate}% of tasks marked done in this period. You're closing loops.`
           : `${tasks.finishRate}% of tasks completed. Finishing even one more per day adds up fast.`,
       metric: `${tasks.finishRate}%`,
       priority: 40,

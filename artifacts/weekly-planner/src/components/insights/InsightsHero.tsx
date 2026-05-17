@@ -31,11 +31,11 @@ export function InsightsHero({
       data-testid="insights-hero"
     >
       <div className="min-w-0 flex-1">
-        <h2 className="type-page-title font-serif text-foreground">{title}</h2>
+        <h2 className="type-section-title font-serif text-foreground">{title}</h2>
         <p className="type-ui mt-2 max-w-prose leading-relaxed text-muted-foreground">{body}</p>
       </div>
       {finishRate !== null ? (
-        <FinishRateRing value={finishRate} size={96} className="mx-auto sm:mx-0" />
+        <FinishRateRing value={finishRate} size={80} className="mx-auto sm:mx-0" />
       ) : null}
     </div>
   );

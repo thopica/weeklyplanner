@@ -45,7 +45,13 @@ export function InsightCard({ insight }: InsightCardProps) {
 export function InsightCardGrid({ insights }: { insights: ActionableInsight[] }) {
   if (insights.length === 0) return null;
   return (
-    <div className="grid gap-3 sm:grid-cols-2" data-testid="insight-card-grid">
+    <div
+      className={cn(
+        "grid gap-3 sm:grid-cols-2",
+        insights.length === 3 && "lg:grid-cols-3",
+      )}
+      data-testid="insight-card-grid"
+    >
       {insights.map((insight) => (
         <InsightCard key={insight.id} insight={insight} />
       ))}

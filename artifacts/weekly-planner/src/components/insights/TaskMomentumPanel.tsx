@@ -1,7 +1,8 @@
 import { useState } from "react";
+import { useReducedMotion } from "framer-motion";
 import { format } from "date-fns";
 import { Link } from "wouter";
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
+import { Bar, BarChart, CartesianGrid, Cell, XAxis, YAxis } from "recharts";
 import { ChevronDown } from "lucide-react";
 import { parseLocalDateStr } from "@/lib/dates";
 import type { TaskInsights } from "@/lib/insights";
@@ -16,6 +17,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import { InsightsPanelShell } from "@/components/insights/InsightsPanelShell";
 import { cn } from "@/lib/utils";
 
 interface TaskMomentumPanelProps {
@@ -52,11 +54,12 @@ function MetricRow({
 }
 
 function formatPercent(n: number | null): string {
-  if (n === null) return "—";
+  if (n === null) return "N/A";
   return `${n}%`;
 }
 
 export function TaskMomentumPanel({ tasks }: TaskMomentumPanelProps) {
+  const reduceMotion = useReducedMotion();
   const [detailsOpen, setDetailsOpen] = useState(false);
   const { range } = tasks;
   const noTasks = tasks.totalTasks === 0;
@@ -68,20 +71,12 @@ export function TaskMomentumPanel({ tasks }: TaskMomentumPanelProps) {
   }));
 
   return (
-    <section
-      className="overflow-hidden rounded-xl border border-border bg-card"
-      aria-labelledby="insights-tasks-heading"
-      data-testid="insights-tasks-panel"
+    <InsightsPanelShell
+      headingId="insights-tasks-heading"
+      title="Task momentum"
+      description="How you showed up and what got finished."
+      testId="insights-tasks-panel"
     >
-      <header className="border-b border-border px-4 py-3 sm:px-5">
-        <h2 id="insights-tasks-heading" className="type-section-title text-foreground">
-          Task momentum
-        </h2>
-        <p className="type-section-desc mt-0.5 text-muted-foreground">
-          How you showed up and what got finished.
-        </p>
-      </header>
-
       <div className="space-y-5 px-4 py-4 sm:px-5">
         {noTasks ? (
           <p className="type-ui text-muted-foreground">
@@ -128,18 +123,29 @@ export function TaskMomentumPanel({ tasks }: TaskMomentumPanelProps) {
                       fill="var(--color-finishRate)"
                       radius={[4, 4, 0, 0]}
                       maxBarSize={40}
-                    />
+                    >
+                      {chartData.map((entry) => (
+                        <Cell
+                          key={entry.label}
+                          fillOpacity={entry.hasData ? 1 : 0.2}
+                        />
+                      ))}
+                    </Bar>
                   </BarChart>
                 </ChartContainer>
               )}
             </div>
 
             <Collapsible open={detailsOpen} onOpenChange={setDetailsOpen}>
-              <CollapsibleTrigger className="flex w-full items-center justify-between rounded-lg border border-border bg-surface-subtle px-3 py-2.5 text-left transition-colors hover:bg-accent/30">
+              <CollapsibleTrigger
+                aria-expanded={detailsOpen}
+                className="flex w-full items-center justify-between rounded-lg border border-border bg-surface-subtle px-3 py-2.5 text-left transition-colors hover:bg-accent/30"
+              >
                 <span className="type-ui font-semibold text-foreground">Details</span>
                 <ChevronDown
                   className={cn(
-                    "h-4 w-4 text-muted-foreground transition-transform",
+                    "h-4 w-4 text-muted-foreground",
+                    !reduceMotion && "transition-transform",
                     detailsOpen && "rotate-180",
                   )}
                 />
@@ -183,7 +189,7 @@ export function TaskMomentumPanel({ tasks }: TaskMomentumPanelProps) {
                     label="Avg tasks per active day"
                     value={
                       tasks.avgTasksPerActiveDay === null
-                        ? "—"
+                        ? "N/A"
                         : String(tasks.avgTasksPerActiveDay)
                     }
                   />
@@ -193,6 +199,6 @@ export function TaskMomentumPanel({ tasks }: TaskMomentumPanelProps) {
           </>
         )}
       </div>
-    </section>
+    </InsightsPanelShell>
   );
 }

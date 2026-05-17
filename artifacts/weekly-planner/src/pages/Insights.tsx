@@ -1,6 +1,7 @@
 import { useMemo, useState, useEffect } from "react";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { useLocation } from "wouter";
+import { tasteSpringContent } from "@/lib/motion";
 import { PlannerHeader } from "@/components/PlannerHeader";
 import { PeriodToggle } from "@/components/insights/PeriodToggle";
 import { InsightsHero } from "@/components/insights/InsightsHero";
@@ -21,7 +22,12 @@ import {
   pickHeroInsight,
 } from "@/lib/insight-messages";
 
+function insightsPeriodLabel(days: InsightsPeriodDays): string {
+  return `Last ${days} days ending today`;
+}
+
 export default function InsightsPage() {
+  const reduceMotion = useReducedMotion();
   const [location] = useLocation();
   const [selectedDateStr, setSelectedDateStr] = useState(() => getSelectedDate());
   const [periodDays, setPeriodDays] = useState<InsightsPeriodDays>(30);
@@ -64,6 +70,26 @@ export default function InsightsPage() {
     };
   }, [periodDays, dataVersion]);
 
+  const sectionStaggerParent = reduceMotion
+    ? undefined
+    : {
+        hidden: {},
+        show: {
+          transition: { staggerChildren: 0.06, delayChildren: 0.02 },
+        },
+      };
+
+  const sectionStaggerChild = reduceMotion
+    ? undefined
+    : {
+        hidden: { opacity: 0, y: 6 },
+        show: {
+          opacity: 1,
+          y: 0,
+          transition: tasteSpringContent,
+        },
+      };
+
   return (
     <motion.div
       className="relative isolate flex h-dvh max-h-dvh min-h-dvh flex-col overflow-hidden bg-background"
@@ -88,35 +114,40 @@ export default function InsightsPage() {
         id="main-content"
         className="scrollbar-hide flex min-h-0 flex-1 flex-col overflow-y-auto"
       >
-        <div className="mx-auto w-full max-w-4xl space-y-6 px-4 py-4 sm:px-5 sm:py-6">
-          <div>
+        <motion.div
+          className="mx-auto w-full max-w-4xl space-y-6 px-4 py-4 sm:px-5 sm:py-6"
+          variants={sectionStaggerParent}
+          initial={reduceMotion ? false : "hidden"}
+          animate={reduceMotion ? undefined : "show"}
+        >
+          <motion.div variants={sectionStaggerChild}>
             <h1 className="type-page-title text-foreground">Insights</h1>
             <p className="type-meta mt-1 text-muted-foreground">
-              Last {periodDays} days ending today
+              {insightsPeriodLabel(periodDays)}
             </p>
-          </div>
+          </motion.div>
 
-          {!summary.hasEnoughData ? (
-            <p
-              className="type-ui rounded-xl border border-border bg-card px-4 py-3 text-muted-foreground"
-              data-testid="insights-low-data-notice"
-            >
-              Keep planning for a few more days to see meaningful trends.
-            </p>
-          ) : null}
+          <motion.div key={periodDays} variants={sectionStaggerChild}>
+            <InsightsHero
+              hero={hero}
+              finishRate={tasks.finishRate}
+              periodDays={periodDays}
+              hasEnoughData={summary.hasEnoughData}
+            />
+          </motion.div>
 
-          <InsightsHero
-            hero={hero}
-            finishRate={tasks.finishRate}
-            periodDays={periodDays}
-            hasEnoughData={summary.hasEnoughData}
-          />
+          <motion.div variants={sectionStaggerChild}>
+            <InsightCardGrid insights={cards} />
+          </motion.div>
 
-          <InsightCardGrid insights={cards} />
+          <motion.div variants={sectionStaggerChild}>
+            <TaskMomentumPanel tasks={tasks} />
+          </motion.div>
 
-          <TaskMomentumPanel tasks={tasks} />
-          <HabitsMomentumPanel habits={habits} />
-        </div>
+          <motion.div variants={sectionStaggerChild}>
+            <HabitsMomentumPanel habits={habits} />
+          </motion.div>
+        </motion.div>
       </main>
     </motion.div>
   );
