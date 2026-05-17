@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/Home";
 import WeekPage from "@/pages/Week";
+import MonthPage from "@/pages/Month";
 import InsightsPage from "@/pages/Insights";
 import SettingsPage from "@/pages/Settings";
 import PrivacyPage from "@/pages/privacy";
@@ -18,6 +19,7 @@ function Router() {
     <Switch>
       <Route path="/" component={Home} />
       <Route path="/week" component={WeekPage} />
+      <Route path="/month" component={MonthPage} />
       <Route path="/insights" component={InsightsPage} />
       <Route path="/settings" component={SettingsPage} />
       <Route path="/privacy" component={PrivacyPage} />

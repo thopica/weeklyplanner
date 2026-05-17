@@ -31,19 +31,19 @@ export function IncompleteDayIndicator({
       <span
         className={cn(
           "flex items-center justify-center",
-          variant === "ribbon" ? "h-1.5 w-full" : "shrink-0",
+          variant === "ribbon" ? "h-3.5 w-full" : "shrink-0",
           className,
         )}
         aria-label={ariaLabel}
       >
         <Check
           className={cn(
-            "h-2.5 w-2.5 shrink-0",
+            "h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4",
             isSelected && variant === "ribbon"
-              ? "text-primary-foreground/75"
+              ? "text-primary-foreground"
               : "text-secondary",
           )}
-          strokeWidth={2.5}
+          strokeWidth={2.75}
           aria-hidden
         />
       </span>
@@ -55,20 +55,23 @@ export function IncompleteDayIndicator({
   const dotClass =
     variant === "ribbon"
       ? isSelected
-        ? "bg-primary-foreground/80"
+        ? "bg-primary-foreground"
         : isPastDay
-          ? "bg-muted-foreground/45"
-          : "bg-primary/70"
+          ? "bg-muted-foreground/55"
+          : "bg-primary"
       : isToday
-        ? "bg-primary-foreground/80"
+        ? "bg-primary-foreground"
         : isPastDay
-          ? "bg-muted-foreground/45"
-          : "bg-primary/70";
+          ? "bg-muted-foreground/55"
+          : "bg-primary";
+
+  const dotSize =
+    variant === "header" ? "h-2.5 w-2.5 sm:h-3 sm:w-3" : "h-2 w-2 sm:h-2.5 sm:w-2.5";
 
   if (variant === "header") {
     return (
       <span
-        className={cn("h-1.5 w-1.5 shrink-0 rounded-full", dotClass, className)}
+        className={cn("shrink-0 rounded-full", dotSize, dotClass, className)}
         title={ariaLabel}
         aria-label={ariaLabel}
       />
@@ -77,11 +80,11 @@ export function IncompleteDayIndicator({
 
   return (
     <span
-      className={cn("flex h-1.5 w-full items-center justify-center", className)}
+      className={cn("flex h-3.5 w-full items-center justify-center sm:h-4", className)}
       aria-hidden
     >
       <span
-        className={cn("h-1.5 w-1.5 rounded-full", dotClass)}
+        className={cn("rounded-full", dotSize, dotClass)}
         title={ariaLabel}
       />
     </span>

@@ -6,13 +6,14 @@ import { Settings, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PomodoroHeaderButton } from "@/components/pomodoro/PomodoroHeaderButton";
 import { PlannerViewToggle } from "@/components/PlannerViewToggle";
+import { formatMonthTitle } from "@/lib/month";
 import { formatWorkweekRange, getWorkweekDays } from "@/lib/workweek";
 
 interface PlannerHeaderProps {
   selectedDateStr: string;
   onSelectedDateChange: (dateStr: string) => void;
   /** When set, shows workweek range instead of single-day title. */
-  viewMode?: "day" | "week";
+  viewMode?: "day" | "week" | "month";
   saveStatus?: "idle" | "saved";
   datePickerHidden?: boolean;
   trailing?: ReactNode;
@@ -32,6 +33,7 @@ export function PlannerHeader({
   const year = format(selectedDate, "yyyy");
   const workweekDays = getWorkweekDays(selectedDateStr);
   const isWeekView = viewMode === "week";
+  const isMonthView = viewMode === "month";
 
   const openDatePicker = () => {
     if (datePickerHidden) return;
@@ -41,11 +43,15 @@ export function PlannerHeader({
 
   const title = isWeekView
     ? formatWorkweekRange(workweekDays)
-    : format(selectedDate, "EEEE, MMM d");
+    : isMonthView
+      ? formatMonthTitle(selectedDateStr)
+      : format(selectedDate, "EEEE, MMM d");
 
   const ariaDateLabel = isWeekView
     ? `Week of ${formatWorkweekRange(workweekDays)}`
-    : format(selectedDate, "EEEE, MMMM d, yyyy");
+    : isMonthView
+      ? formatMonthTitle(selectedDateStr)
+      : format(selectedDate, "EEEE, MMMM d, yyyy");
 
   return (
     <header className="flex shrink-0 items-center justify-between gap-3 border-b border-border bg-card px-4 py-2 sm:px-5">
@@ -58,7 +64,9 @@ export function PlannerHeader({
           aria-label={
             datePickerHidden
               ? ariaDateLabel
-              : `Change date, currently ${ariaDateLabel}`
+              : isMonthView
+                ? `Change month, currently ${ariaDateLabel}`
+                : `Change date, currently ${ariaDateLabel}`
           }
           className="-ml-1 max-w-full rounded-lg border border-transparent px-2 py-1 text-left transition-colors hover:border-border hover:bg-accent/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-default disabled:hover:border-transparent disabled:hover:bg-transparent"
         >

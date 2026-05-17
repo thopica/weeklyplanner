@@ -1,16 +1,18 @@
 import { useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 
-type PlannerView = "day" | "week" | "insights";
+type PlannerView = "day" | "week" | "month" | "insights";
 
 function viewFromLocation(location: string): PlannerView {
   if (location === "/week") return "week";
+  if (location === "/month") return "month";
   if (location === "/insights") return "insights";
   return "day";
 }
 
 function pathForView(view: PlannerView): string {
   if (view === "week") return "/week";
+  if (view === "month") return "/month";
   if (view === "insights") return "/insights";
   return "/";
 }
@@ -34,6 +36,7 @@ export function PlannerViewToggle() {
         [
           { id: "day" as const, label: "Day" },
           { id: "week" as const, label: "Week" },
+          { id: "month" as const, label: "Month" },
           { id: "insights" as const, label: "Insights" },
         ] as const
       ).map(({ id, label }) => {
@@ -47,8 +50,8 @@ export function PlannerViewToggle() {
             data-testid={`view-toggle-${id}`}
             onClick={() => goTo(id)}
             className={cn(
-              "type-caption min-w-[3.25rem] rounded-md px-2 py-1 font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-              id === "insights" && "min-w-[4.5rem]",
+              "type-caption min-w-[2.75rem] rounded-md px-1.5 py-1 font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:min-w-[3.25rem] sm:px-2",
+              id === "insights" && "min-w-[3.75rem] sm:min-w-[4.5rem]",
               selected
                 ? "bg-primary text-primary-foreground shadow-sm"
                 : "text-muted-foreground hover:text-foreground",
