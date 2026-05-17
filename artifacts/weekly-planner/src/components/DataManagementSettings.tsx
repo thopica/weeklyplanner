@@ -1,8 +1,10 @@
+import { useState } from "react";
 import { Download, Upload, Trash2, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { toast } from "@/hooks/use-toast";
 import {
-  clearAllData,
+  clearPlannerData,
   getPlannerData,
   importPlannerBackup,
   loadDemoData,
@@ -17,29 +19,33 @@ export function DataManagementSettings({
   selectedDateStr,
   onDataReset,
 }: DataManagementSettingsProps) {
-  const handleClearData = () => {
-    if (confirm("Are you sure you want to delete all planner data? This cannot be undone.")) {
-      clearAllData();
-      onDataReset();
-    }
+  const [clearDialogOpen, setClearDialogOpen] = useState(false);
+
+  const handleClearPlannerData = () => {
+    clearPlannerData();
+    onDataReset();
+    setClearDialogOpen(false);
+    toast({
+      title: "Planner data cleared",
+      description: "Days, tasks, habits, and calendar hours were removed. Theme and Pomodoro settings were kept.",
+    });
   };
 
   const handleLoadDemo = () => {
-    try {
-      loadDemoData(selectedDateStr);
-      onDataReset();
-      toast({
-        title: "Demo data loaded",
-        description: "30 days of sample tasks and habits are ready. Open Insights or Today on the planner.",
-      });
-    } catch (error) {
-      console.error("loadDemoData failed", error);
+    const result = loadDemoData(selectedDateStr);
+    if (!result.ok) {
       toast({
         variant: "destructive",
         title: "Could not load demo data",
-        description: "Try clearing data first, then load demo again.",
+        description: result.message,
       });
+      return;
     }
+    onDataReset();
+    toast({
+      title: "Demo data loaded",
+      description: "30 days of sample tasks and habits are ready. Open Insights or Today on the planner.",
+    });
   };
 
   const handleExport = () => {
@@ -60,14 +66,26 @@ export function DataManagementSettings({
     reader.onload = (event) => {
       try {
         const json = JSON.parse(event.target?.result as string);
-        if (importPlannerBackup(json)) {
+        const result = importPlannerBackup(json);
+        if (result.ok) {
           onDataReset();
-          alert("Data imported successfully!");
+          toast({
+            title: "Backup imported",
+            description: "Your planner data was restored from the file.",
+          });
         } else {
-          alert("Invalid backup file format.");
+          toast({
+            variant: "destructive",
+            title: "Import failed",
+            description: result.message,
+          });
         }
       } catch {
-        alert("Failed to parse backup file.");
+        toast({
+          variant: "destructive",
+          title: "Import failed",
+          description: "Could not read that file. Check that it is valid JSON.",
+        });
       }
     };
     reader.readAsText(file);
@@ -121,17 +139,28 @@ export function DataManagementSettings({
         <Button
           variant="destructive"
           className="mt-2 w-full justify-start text-sm"
-          onClick={handleClearData}
-          data-testid="button-clear-data"
+          onClick={() => setClearDialogOpen(true)}
+          data-testid="button-clear-planner-data"
         >
           <Trash2 className="mr-2 h-4 w-4" />
-          Clear all data
+          Clear planner data
         </Button>
 
         <p className="mt-2 text-center text-xs text-muted-foreground">
-          All data is stored locally in your browser.
+          All data is stored locally in your browser. Clearing planner data keeps your theme and
+          Pomodoro preferences.
         </p>
       </div>
+
+      <ConfirmDialog
+        open={clearDialogOpen}
+        onOpenChange={setClearDialogOpen}
+        title="Clear planner data?"
+        description="This removes all days, tasks, habits, and saved calendar hours from this browser. Your theme, color mode, Pomodoro settings, and layout preferences will stay."
+        confirmLabel="Clear planner data"
+        destructive
+        onConfirm={handleClearPlannerData}
+      />
     </section>
   );
 }

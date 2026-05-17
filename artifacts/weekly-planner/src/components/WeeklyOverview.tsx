@@ -30,7 +30,7 @@ function habitsMetForDay(
 
 function habitExistedOnDate(habit: HabitDefinition, dateStr: string): boolean {
   try {
-    const created = format(parseISO(habit.createdAt), "yyyy-MM-dd");
+    const created = format(new Date(habit.createdAt), "yyyy-MM-dd");
     return dateStr >= created;
   } catch {
     return true;

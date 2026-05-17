@@ -10,6 +10,7 @@ import {
   MAX_HABIT_NAME_LENGTH,
   MAX_HABITS,
 } from "@/lib/types";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { getHabits, pruneHabitLogs, saveHabits } from "@/lib/storage";
 
 interface HabitsSettingsProps {
@@ -89,6 +90,7 @@ export function HabitsSettings({ onHabitsChange }: HabitsSettingsProps) {
   const [isAdding, setIsAdding] = useState(false);
   const [draft, setDraft] = useState<HabitDraft>(emptyDraft);
   const [error, setError] = useState<string | null>(null);
+  const [habitPendingDelete, setHabitPendingDelete] = useState<HabitDefinition | null>(null);
 
   const persist = (next: HabitDefinition[]) => {
     saveHabits(next);
@@ -130,12 +132,15 @@ export function HabitsSettings({ onHabitsChange }: HabitsSettingsProps) {
   };
 
   const handleDelete = (habit: HabitDefinition) => {
-    if (!confirm(`Delete "${habit.name}"? Past daily logs for this habit will be removed.`)) {
-      return;
-    }
-    pruneHabitLogs([habit.id]);
-    persist(habits.filter((h) => h.id !== habit.id));
-    if (editingId === habit.id) resetForm();
+    setHabitPendingDelete(habit);
+  };
+
+  const confirmDeleteHabit = () => {
+    if (!habitPendingDelete) return;
+    pruneHabitLogs([habitPendingDelete.id]);
+    persist(habits.filter((h) => h.id !== habitPendingDelete.id));
+    if (editingId === habitPendingDelete.id) resetForm();
+    setHabitPendingDelete(null);
   };
 
   const handleStartAdd = () => {
@@ -298,6 +303,22 @@ export function HabitsSettings({ onHabitsChange }: HabitsSettingsProps) {
           {error}
         </p>
       )}
+
+      <ConfirmDialog
+        open={!!habitPendingDelete}
+        onOpenChange={(open) => {
+          if (!open) setHabitPendingDelete(null);
+        }}
+        title="Delete habit?"
+        description={
+          habitPendingDelete
+            ? `“${habitPendingDelete.name}” will be removed. Past daily logs for this habit will be deleted.`
+            : ""
+        }
+        confirmLabel="Delete habit"
+        destructive
+        onConfirm={confirmDeleteHabit}
+      />
     </section>
   );
 }

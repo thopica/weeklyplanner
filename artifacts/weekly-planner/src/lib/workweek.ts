@@ -1,4 +1,5 @@
-import { addDays, format, parseISO, startOfWeek } from "date-fns";
+import { addDays, format, startOfWeek } from "date-fns";
+import { parseLocalDateStr } from "@/lib/dates";
 
 /** Full week Mon–Sun in week view. */
 export const WORKWEEK_LENGTH = 7;
@@ -22,11 +23,6 @@ export function getWorkweekStart(date: Date): Date {
 export interface WorkweekDay {
   date: Date;
   dateStr: string;
-}
-
-/** Parse YYYY-MM-DD at local noon (avoids UTC day-shift bugs). */
-function parseLocalDateStr(dateStr: string): Date {
-  return parseISO(`${dateStr}T12:00:00`);
 }
 
 export function getWorkweekDays(anchorDateStr: string): WorkweekDay[] {

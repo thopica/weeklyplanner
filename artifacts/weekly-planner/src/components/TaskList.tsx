@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { format, parseISO } from "date-fns";
 import { Task } from "@/lib/types";
 import { createTaskId } from "@/lib/tasks";
@@ -16,6 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Trash2, Plus, CalendarDays } from "lucide-react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { tasteSpringLayout, tasteTransition } from "@/lib/motion";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { PlannerSection } from "@/components/PlannerSection";
 import { plannerFieldClass } from "@/lib/planner-field";
 import { cn } from "@/lib/utils";
@@ -40,6 +41,8 @@ export function TaskList({
   const [newTaskText, setNewTaskText] = useState("");
   const [moveTask, setMoveTask] = useState<Task | null>(null);
   const [moveTargetDate, setMoveTargetDate] = useState(sourceDateStr);
+  const [taskPendingDelete, setTaskPendingDelete] = useState<Task | null>(null);
+  const taskTextOnFocusRef = useRef<Record<string, string>>({});
   const reduceMotion = useReducedMotion();
   const listTransition = tasteTransition(reduceMotion, tasteSpringLayout);
 
@@ -72,12 +75,13 @@ export function TaskList({
   };
 
   const requestDeleteTask = (task: Task) => {
-    const label = task.text.trim();
-    const prompt = label
-      ? `Remove "${label.length > 48 ? `${label.slice(0, 48)}…` : label}"?`
-      : "Remove this task?";
-    if (!window.confirm(prompt)) return;
-    deleteTask(task.id);
+    setTaskPendingDelete(task);
+  };
+
+  const confirmDeleteTask = () => {
+    if (!taskPendingDelete) return;
+    deleteTask(taskPendingDelete.id);
+    setTaskPendingDelete(null);
   };
 
   const updateTaskText = (id: string, text: string) => {
@@ -159,8 +163,15 @@ export function TaskList({
                 type="text"
                 value={task.text}
                 onChange={(e) => updateTaskText(task.id, e.target.value)}
+                onFocus={() => {
+                  taskTextOnFocusRef.current[task.id] = task.text;
+                }}
                 onBlur={(e) => {
-                  if (!e.target.value.trim()) deleteTask(task.id);
+                  if (e.target.value.trim()) return;
+                  const previous = taskTextOnFocusRef.current[task.id];
+                  if (previous?.trim()) {
+                    updateTaskText(task.id, previous);
+                  }
                 }}
                 onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
                 data-testid={`task-input-${task.id}`}
@@ -227,6 +238,22 @@ export function TaskList({
           <span className="h-7 w-7 shrink-0" aria-hidden />
         </form>
       </div>
+
+      <ConfirmDialog
+        open={!!taskPendingDelete}
+        onOpenChange={(open) => {
+          if (!open) setTaskPendingDelete(null);
+        }}
+        title="Remove task?"
+        description={
+          taskPendingDelete?.text.trim()
+            ? `“${taskPendingDelete.text.length > 120 ? `${taskPendingDelete.text.slice(0, 120)}…` : taskPendingDelete.text}” will be removed from this day.`
+            : "This task will be removed from this day."
+        }
+        confirmLabel="Remove"
+        destructive
+        onConfirm={confirmDeleteTask}
+      />
 
       <Dialog
         open={!!moveTask}

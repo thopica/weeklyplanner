@@ -32,10 +32,16 @@ const habitNameClass = (done: boolean) =>
     done ? "text-foreground-subtle line-through" : "text-foreground",
   );
 
-/** Typing-only numeric field; no browser steppers. Width grows with digit count. */
+/** Typing-only numeric field; neutral focus (no primary/orange ring). */
+const HABIT_ACTUAL_DEFAULT_DIGITS = 5;
+
 const actualInputClass = plannerFieldClass(
   "sm",
-  "h-8 min-w-[2.75rem] max-w-[9rem] shrink-0 px-2 text-sm font-medium tabular-nums [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none",
+  [
+    "h-8 w-auto shrink-0 px-2.5 text-sm font-medium tabular-nums",
+    "[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none",
+    "focus:!border-border-strong focus:!shadow-[var(--shadow-field)]",
+  ].join(" "),
 );
 
 function parseDigitsOnly(raw: string): number | undefined {
@@ -50,9 +56,11 @@ function formatCount(n: number | undefined): string {
   return n === undefined ? "" : String(n);
 }
 
-function actualInputWidthCh(value: string): string {
-  const len = Math.max(value.length, 1);
-  return `${len + 1}ch`;
+/** Default room for 5 digits; grows when the value is longer. */
+function actualInputWidth(value: string): string {
+  const digits = Math.max(value.length, HABIT_ACTUAL_DEFAULT_DIGITS);
+  // +2.5ch accounts for horizontal padding and border in border-box sizing
+  return `${digits + 2.5}ch`;
 }
 
 function HabitStatusIcon({ met }: { met: boolean }) {
@@ -105,8 +113,8 @@ function QuantifiableHabitRow({
 
   return (
     <li className={habitRowClass(met)} data-testid={`habit-row-${habit.id}`}>
-      <div className="flex min-w-0 flex-1 flex-nowrap items-center gap-x-2 overflow-hidden sm:gap-x-2.5">
-        <span className={cn(habitNameClass(met), "max-w-[40%] truncate sm:max-w-none")} title={habit.name}>
+      <div className="flex min-w-0 flex-1 flex-nowrap items-center gap-x-2 sm:gap-x-2.5">
+        <span className={cn(habitNameClass(met), "min-w-0 max-w-[40%] truncate sm:max-w-none")} title={habit.name}>
           {habit.name}
         </span>
 
@@ -137,7 +145,7 @@ function QuantifiableHabitRow({
           onChange={(e) => setDraft(e.target.value.replace(/\D/g, ""))}
           aria-label={`${habit.name} actual${unit ? ` in ${unit}` : ""}`}
           className={actualInputClass}
-          style={{ width: actualInputWidthCh(displayValue || "1") }}
+          style={{ width: actualInputWidth(displayValue) }}
           data-testid={`habit-actual-${habit.id}`}
         />
       </div>

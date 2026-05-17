@@ -10,6 +10,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { getScheduleRange, saveScheduleRange } from "@/lib/storage";
+import { toast } from "@/hooks/use-toast";
 import {
   OUTLOOK_DEFAULT_DAY_RANGE,
   allDayGridMinutes,
@@ -50,10 +51,25 @@ export function CalendarHoursSettings({ onSaved }: CalendarHoursSettingsProps) {
 
   const persistRange = (startMin: number, endMin: number, statusMessage: string) => {
     if (endMin <= startMin + 30) {
-      alert("End time must be at least 30 minutes after start time.");
+      toast({
+        variant: "destructive",
+        title: "Invalid calendar hours",
+        description: "End time must be at least 30 minutes after start time.",
+      });
       return;
     }
-    saveScheduleRange({ startMin, endMin }, { normalizePlannerData: true });
+    const result = saveScheduleRange(
+      { startMin, endMin },
+      { normalizePlannerData: true },
+    );
+    if (!result.ok) {
+      toast({
+        title: "Could not save calendar hours",
+        description: result.message,
+        variant: "destructive",
+      });
+      return;
+    }
     setPersistedRange({ startMin, endMin });
     setCalStart(startMin);
     setCalEnd(endMin);

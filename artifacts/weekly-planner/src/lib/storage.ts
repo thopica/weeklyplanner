@@ -11,6 +11,7 @@ import {
   TimeBlock,
   HabitDefinition,
   Task,
+  MAX_HABITS,
 } from './types';
 import {
   type DayScheduleRange,
@@ -26,6 +27,48 @@ import {
   normalizePomodoroSettings,
   type PomodoroSettings,
 } from './pomodoro';
+export type StorageWriteResult =
+  | { ok: true }
+  | { ok: false; code: "quota" | "unavailable" | "unknown"; message: string };
+
+export type ImportBackupResult =
+  | StorageWriteResult
+  | { ok: false; code: "invalid"; message: string };
+
+const DATE_KEY_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+function writeLocalStorage(key: string, value: string): StorageWriteResult {
+  try {
+    localStorage.setItem(key, value);
+    return { ok: true };
+  } catch (e) {
+    if (
+      e instanceof DOMException &&
+      (e.name === "QuotaExceededError" || e.code === 22)
+    ) {
+      return {
+        ok: false,
+        code: "quota",
+        message:
+          "Storage is full. Export a backup, then remove old content before saving again.",
+      };
+    }
+    if (e instanceof DOMException && e.name === "SecurityError") {
+      return {
+        ok: false,
+        code: "unavailable",
+        message: "Browser storage is not available in this context.",
+      };
+    }
+    console.error("localStorage.setItem failed", key, e);
+    return {
+      ok: false,
+      code: "unknown",
+      message: "Could not save your data. Try again or export a backup first.",
+    };
+  }
+}
+
 function isLegacyHourBlock(
   b: unknown,
 ): b is { id: string; hour: number; label: string } {
@@ -42,36 +85,91 @@ function migrateTimeBlocks(
   range: DayScheduleRange,
 ): TimeBlock[] {
   if (!Array.isArray(blocks) || blocks.length === 0) return [];
-  if (isLegacyHourBlock(blocks[0])) {
-    return (blocks as Array<{ id: string; hour: number; label: string }>).map(
-      (old) => ({
-        id: old.id,
-        startMinute: clampBlockStart(old.hour * 60, range),
+
+  const migrated = blocks
+    .map((block): TimeBlock | null => {
+      if (isLegacyHourBlock(block)) {
+        const startMinute = clampBlockStart(block.hour * 60, range);
+        return {
+          id: typeof block.id === "string" ? block.id : crypto.randomUUID(),
+          startMinute,
+          durationMinutes: clampBlockDuration(startMinute, 60, range),
+          label: typeof block.label === "string" ? block.label : "",
+        };
+      }
+      if (typeof block !== "object" || block === null) return null;
+      const b = block as Partial<TimeBlock>;
+      if (typeof b.id !== "string" || !b.id) return null;
+      const sm = Number(b.startMinute);
+      const dm = Number(b.durationMinutes);
+      const startBase = Number.isFinite(sm) ? sm : range.startMin;
+      const cs = clampBlockStart(startBase, range);
+      return {
+        id: b.id,
+        label: typeof b.label === "string" ? b.label : "",
+        startMinute: cs,
         durationMinutes: clampBlockDuration(
-          clampBlockStart(old.hour * 60, range),
-          60,
+          cs,
+          Number.isFinite(dm) && dm >= SLOT_MINUTES ? dm : SLOT_MINUTES,
           range,
         ),
-        label: old.label ?? '',
-      }),
-    );
+      };
+    })
+    .filter((b): b is TimeBlock => b !== null);
+
+  return normalizeBlocksToRange(migrated, range);
+}
+
+function normalizeTask(raw: unknown): Task | null {
+  if (typeof raw !== "object" || raw === null) return null;
+  const t = raw as Partial<Task>;
+  if (typeof t.id !== "string" || !t.id.trim()) return null;
+  return {
+    id: t.id,
+    text: typeof t.text === "string" ? t.text : "",
+    completed: Boolean(t.completed),
+    createdAt:
+      typeof t.createdAt === "string" && t.createdAt
+        ? t.createdAt
+        : new Date().toISOString(),
+  };
+}
+
+function normalizeTaskList(raw: unknown): Task[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.map(normalizeTask).filter((t): t is Task => t !== null);
+}
+
+function normalizeHabit(raw: unknown): HabitDefinition | null {
+  if (typeof raw !== "object" || raw === null) return null;
+  const h = raw as Partial<HabitDefinition>;
+  if (typeof h.id !== "string" || !h.id.trim()) return null;
+  if (typeof h.name !== "string") return null;
+  const kind = h.kind === "quantifiable" ? "quantifiable" : "boolean";
+  const habit: HabitDefinition = {
+    id: h.id,
+    name: h.name,
+    kind,
+    createdAt:
+      typeof h.createdAt === "string" && h.createdAt
+        ? h.createdAt
+        : new Date().toISOString(),
+  };
+  if (kind === "quantifiable") {
+    if (typeof h.unit === "string") habit.unit = h.unit;
+    if (typeof h.target === "number" && Number.isFinite(h.target)) {
+      habit.target = h.target;
+    }
   }
-  return (blocks as TimeBlock[]).map((b) => {
-    const sm = Number(b.startMinute);
-    const dm = Number(b.durationMinutes);
-    const startBase = Number.isFinite(sm) ? sm : range.startMin;
-    const cs = clampBlockStart(startBase, range);
-    return {
-      id: b.id,
-      label: typeof b.label === "string" ? b.label : "",
-      startMinute: cs,
-      durationMinutes: clampBlockDuration(
-        cs,
-        Number.isFinite(dm) && dm >= SLOT_MINUTES ? dm : SLOT_MINUTES,
-        range,
-      ),
-    };
-  });
+  return habit;
+}
+
+function normalizeHabitsList(raw: unknown): HabitDefinition[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map(normalizeHabit)
+    .filter((h): h is HabitDefinition => h !== null)
+    .slice(0, MAX_HABITS);
 }
 
 export const STORAGE_KEYS = {
@@ -106,8 +204,8 @@ export function getSchedulePaneWidth(): number {
   }
 }
 
-export function saveSchedulePaneWidth(width: number): void {
-  localStorage.setItem(
+export function saveSchedulePaneWidth(width: number): StorageWriteResult {
+  return writeLocalStorage(
     STORAGE_KEYS.SCHEDULE_PANE_WIDTH,
     String(clampSchedulePaneWidth(width)),
   );
@@ -122,8 +220,8 @@ export function getScheduleVisible(): boolean {
   }
 }
 
-export function saveScheduleVisible(visible: boolean): void {
-  localStorage.setItem(STORAGE_KEYS.SCHEDULE_VISIBLE, String(visible));
+export function saveScheduleVisible(visible: boolean): StorageWriteResult {
+  return writeLocalStorage(STORAGE_KEYS.SCHEDULE_VISIBLE, String(visible));
 }
 
 export function getScheduleRange(): DayScheduleRange {
@@ -131,7 +229,12 @@ export function getScheduleRange(): DayScheduleRange {
     const raw = localStorage.getItem(STORAGE_KEYS.SCHEDULE_RANGE);
     if (!raw) return { ...OUTLOOK_DEFAULT_DAY_RANGE };
     const p = JSON.parse(raw) as { startMin?: unknown; endMin?: unknown };
-    if (typeof p.startMin === 'number' && typeof p.endMin === 'number') {
+    if (
+      typeof p.startMin === "number" &&
+      typeof p.endMin === "number" &&
+      Number.isFinite(p.startMin) &&
+      Number.isFinite(p.endMin)
+    ) {
       return clampDayScheduleRange({ startMin: p.startMin, endMin: p.endMin });
     }
   } catch {
@@ -144,44 +247,75 @@ export function getScheduleRange(): DayScheduleRange {
 export function saveScheduleRange(
   range: DayScheduleRange,
   options: { normalizePlannerData?: boolean } = {},
-): void {
+): StorageWriteResult {
   const r = clampDayScheduleRange(range);
-  localStorage.setItem(STORAGE_KEYS.SCHEDULE_RANGE, JSON.stringify(r));
+  const rangeResult = writeLocalStorage(
+    STORAGE_KEYS.SCHEDULE_RANGE,
+    JSON.stringify(r),
+  );
+  if (!rangeResult.ok) return rangeResult;
 
   if (options.normalizePlannerData) {
     const data = getPlannerData();
     for (const dateStr of Object.keys(data.days)) {
       const day = data.days[dateStr];
-      if (!day || !Array.isArray(day.timeBlocks)) continue;
-      const migrated = migrateTimeBlocks(day.timeBlocks, r);
+      if (!day) continue;
+      const migrated = migrateTimeBlocks(day.timeBlocks ?? [], r);
       data.days[dateStr] = {
         ...day,
-        timeBlocks: normalizeBlocksToRange(migrated, r),
+        timeBlocks: migrated,
       };
     }
-    savePlannerData(data);
+    return savePlannerData(data);
   }
+
+  return { ok: true };
 }
 
-function normalizePlannerData(parsed: PlannerData): PlannerData {
+function normalizePlannerData(parsed: Partial<PlannerData>): PlannerData {
+  const days: Record<string, DayData> = {};
+  if (parsed.days && typeof parsed.days === "object" && !Array.isArray(parsed.days)) {
+    for (const [dateStr, raw] of Object.entries(parsed.days)) {
+      if (!DATE_KEY_RE.test(dateStr)) continue;
+      days[dateStr] = normalizeDayData(raw);
+    }
+  }
   return {
-    days: parsed.days ?? {},
-    habits: Array.isArray(parsed.habits) ? parsed.habits : [],
+    days,
+    habits: normalizeHabitsList(parsed.habits),
   };
 }
 
-function normalizeDayData(raw: Partial<DayData> & { waterGlasses?: unknown }): DayData {
-  const { waterGlasses: _legacy, ...rest } = raw;
-  const merged: DayData = {
-    ...structuredClone(defaultDayData),
-    ...rest,
-    mainFocusCompleted: raw.mainFocusCompleted ?? false,
+function normalizeDayData(raw: unknown): DayData {
+  if (typeof raw !== "object" || raw === null) {
+    return structuredClone(defaultDayData);
+  }
+  const r = raw as Partial<DayData> & { waterGlasses?: unknown };
+  const mealsRaw =
+    r.meals && typeof r.meals === "object" && !Array.isArray(r.meals)
+      ? (r.meals as Partial<DayData["meals"]>)
+      : null;
+
+  return {
+    mainFocus: typeof r.mainFocus === "string" ? r.mainFocus : "",
+    mainFocusCompleted: Boolean(r.mainFocusCompleted),
+    highPriorityTasks: normalizeTaskList(r.highPriorityTasks),
+    generalTasks: normalizeTaskList(r.generalTasks),
+    timeBlocks: Array.isArray(r.timeBlocks) ? (r.timeBlocks as TimeBlock[]) : [],
+    meals: {
+      breakfast: typeof mealsRaw?.breakfast === "string" ? mealsRaw.breakfast : "",
+      lunch: typeof mealsRaw?.lunch === "string" ? mealsRaw.lunch : "",
+      dinner: typeof mealsRaw?.dinner === "string" ? mealsRaw.dinner : "",
+    },
+    gratitude: Array.isArray(r.gratitude)
+      ? r.gratitude.slice(0, 3).map((g) => (typeof g === "string" ? g : ""))
+      : ["", "", ""],
+    brainDump: typeof r.brainDump === "string" ? r.brainDump : "",
     habitLogs:
-      raw.habitLogs && typeof raw.habitLogs === "object" && !Array.isArray(raw.habitLogs)
-        ? { ...raw.habitLogs }
+      r.habitLogs && typeof r.habitLogs === "object" && !Array.isArray(r.habitLogs)
+        ? { ...r.habitLogs }
         : {},
   };
-  return merged;
 }
 
 export function getPlannerData(): PlannerData {
@@ -194,17 +328,24 @@ export function getPlannerData(): PlannerData {
   }
 }
 
-export function savePlannerData(data: PlannerData): void {
-  localStorage.setItem(STORAGE_KEYS.PLANNER_DATA, JSON.stringify(data));
+export function savePlannerData(data: PlannerData): StorageWriteResult {
+  return writeLocalStorage(STORAGE_KEYS.PLANNER_DATA, JSON.stringify(data));
 }
 
-/** Validate and persist a backup JSON object. Returns false when the shape is invalid. */
-export function importPlannerBackup(raw: unknown): boolean {
-  if (typeof raw !== "object" || raw === null) return false;
+/** Validate and persist a backup JSON object. */
+export function importPlannerBackup(raw: unknown): ImportBackupResult {
+  if (typeof raw !== "object" || raw === null) {
+    return { ok: false, code: "invalid", message: "Invalid backup file format." };
+  }
   const candidate = raw as Partial<PlannerData>;
-  if (!candidate.days || typeof candidate.days !== "object") return false;
-  savePlannerData(normalizePlannerData(candidate as PlannerData));
-  return true;
+  if (
+    !candidate.days ||
+    typeof candidate.days !== "object" ||
+    Array.isArray(candidate.days)
+  ) {
+    return { ok: false, code: "invalid", message: "Invalid backup file format." };
+  }
+  return savePlannerData(normalizePlannerData(candidate));
 }
 
 export function getDayData(dateStr: string): DayData {
@@ -214,41 +355,42 @@ export function getDayData(dateStr: string): DayData {
 
   const range = getScheduleRange();
 
+  const blocks = raw.timeBlocks ?? [];
   const needsLegacyMigration =
-    Array.isArray(raw.timeBlocks) &&
-    raw.timeBlocks.length > 0 &&
-    isLegacyHourBlock(raw.timeBlocks[0]);
+    Array.isArray(blocks) && blocks.some((b) => isLegacyHourBlock(b));
 
-  const migrated = migrateTimeBlocks(raw.timeBlocks ?? [], range);
-  const timeBlocks = normalizeBlocksToRange(migrated, range);
+  const timeBlocks = migrateTimeBlocks(blocks, range);
 
   const merged: DayData = {
-    ...normalizeDayData(raw as Partial<DayData> & { waterGlasses?: unknown }),
+    ...normalizeDayData(raw),
     timeBlocks,
   };
 
   if (needsLegacyMigration) {
     data.days[dateStr] = merged;
-    savePlannerData(data);
+    const saveResult = savePlannerData(data);
+    if (!saveResult.ok) {
+      console.error("Failed to persist legacy time-block migration", saveResult);
+    }
   }
 
   return merged;
 }
 
-export function saveDayData(dateStr: string, dayData: DayData): void {
+export function saveDayData(dateStr: string, dayData: DayData): StorageWriteResult {
   const data = getPlannerData();
   data.days[dateStr] = dayData;
-  savePlannerData(data);
+  return savePlannerData(data);
 }
 
 export function getHabits(): HabitDefinition[] {
   return getPlannerData().habits ?? [];
 }
 
-export function saveHabits(habits: HabitDefinition[]): void {
+export function saveHabits(habits: HabitDefinition[]): StorageWriteResult {
   const data = getPlannerData();
   data.habits = habits;
-  savePlannerData(data);
+  return savePlannerData(data);
 }
 
 /** Remove logs for deleted habit ids across all stored days. */
@@ -272,7 +414,12 @@ export function pruneHabitLogs(removedIds: string[]): void {
       changed = true;
     }
   }
-  if (changed) savePlannerData(data);
+  if (changed) {
+    const result = savePlannerData(data);
+    if (!result.ok) {
+      console.error("Failed to prune habit logs", result);
+    }
+  }
 }
 
 export function getPomodoroSettings(): PomodoroSettings {
@@ -285,9 +432,9 @@ export function getPomodoroSettings(): PomodoroSettings {
   }
 }
 
-export function savePomodoroSettings(settings: PomodoroSettings): void {
+export function savePomodoroSettings(settings: PomodoroSettings): StorageWriteResult {
   const normalized = normalizePomodoroSettings(settings);
-  localStorage.setItem(STORAGE_KEYS.POMODORO, JSON.stringify(normalized));
+  return writeLocalStorage(STORAGE_KEYS.POMODORO, JSON.stringify(normalized));
 }
 
 export function getTheme(): string {
@@ -302,14 +449,16 @@ export function getColorMode(): ColorMode {
   return 'light';
 }
 
-export function saveTheme(theme: string): void {
-  localStorage.setItem(STORAGE_KEYS.THEME, theme);
-  applyAppearance(theme, getColorMode());
+export function saveTheme(theme: string): StorageWriteResult {
+  const result = writeLocalStorage(STORAGE_KEYS.THEME, theme);
+  if (result.ok) applyAppearance(theme, getColorMode());
+  return result;
 }
 
-export function saveColorMode(mode: ColorMode): void {
-  localStorage.setItem(STORAGE_KEYS.COLOR_MODE, mode);
-  applyAppearance(getTheme(), mode);
+export function saveColorMode(mode: ColorMode): StorageWriteResult {
+  const result = writeLocalStorage(STORAGE_KEYS.COLOR_MODE, mode);
+  if (result.ok) applyAppearance(getTheme(), mode);
+  return result;
 }
 
 export function initAppearance(): void {
@@ -333,8 +482,8 @@ export function getSelectedDate(): string {
   return today;
 }
 
-export function saveSelectedDate(dateStr: string): void {
-  localStorage.setItem(STORAGE_KEYS.SELECTED_DATE, dateStr);
+export function saveSelectedDate(dateStr: string): StorageWriteResult {
+  return writeLocalStorage(STORAGE_KEYS.SELECTED_DATE, dateStr);
 }
 
 const DEMO_HABIT_RUN_ID = "demo-habit-run";
@@ -484,7 +633,7 @@ function buildDemoInsightsDay(
   };
 }
 
-export function loadDemoData(anchorDateStr: string): void {
+export function loadDemoData(anchorDateStr: string): StorageWriteResult {
   const habitCreatedAt = subDays(parseLocalDateStr(todayStr()), 45).toISOString();
   const demoHabitRun: HabitDefinition = {
     id: DEMO_HABIT_RUN_ID,
@@ -534,11 +683,18 @@ export function loadDemoData(anchorDateStr: string): void {
     );
   }
 
-  savePlannerData(data);
-  saveSelectedDate(end);
+  const plannerResult = savePlannerData(data);
+  if (!plannerResult.ok) return plannerResult;
+  return saveSelectedDate(end);
 }
 
-export function clearAllData(): void {
+/** Removes planner days/habits and calendar hour range; keeps theme, Pomodoro, and UI prefs. */
+export function clearPlannerData(): void {
   localStorage.removeItem(STORAGE_KEYS.PLANNER_DATA);
   localStorage.removeItem(STORAGE_KEYS.SCHEDULE_RANGE);
+}
+
+/** @deprecated Use {@link clearPlannerData} */
+export function clearAllData(): void {
+  clearPlannerData();
 }

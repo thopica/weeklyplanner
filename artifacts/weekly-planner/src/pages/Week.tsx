@@ -15,9 +15,11 @@ export default function WeekPage() {
   const [location, navigate] = useLocation();
   const [selectedDateStr, setSelectedDateStr] = useState(() => getSelectedDate());
   const [scheduleRange, setScheduleRange] = useState(() => getScheduleRange());
+  const [dataVersion, setDataVersion] = useState(0);
 
   const loadData = () => {
     setScheduleRange(getScheduleRange());
+    setDataVersion((v) => v + 1);
   };
 
   useEffect(() => {
@@ -30,6 +32,20 @@ export default function WeekPage() {
       setSelectedDateStr(getSelectedDate());
       loadData();
     }
+  }, [location]);
+
+  useEffect(() => {
+    if (location !== "/week") return;
+    const refresh = () => {
+      setSelectedDateStr(getSelectedDate());
+      loadData();
+    };
+    window.addEventListener("focus", refresh);
+    window.addEventListener("storage", refresh);
+    return () => {
+      window.removeEventListener("focus", refresh);
+      window.removeEventListener("storage", refresh);
+    };
   }, [location]);
 
   const openDay = (dateStr: string) => {
@@ -62,6 +78,7 @@ export default function WeekPage() {
 
       <main id="main-content" className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
         <WorkweekBoard
+          key={dataVersion}
           anchorDateStr={selectedDateStr}
           range={scheduleRange}
           onOpenDay={openDay}

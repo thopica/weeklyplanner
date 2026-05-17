@@ -1,4 +1,5 @@
-import { format, parseISO } from "date-fns";
+import { format } from "date-fns";
+import { parseLocalDateStr } from "@/lib/dates";
 import type { HabitDayStatus } from "@/lib/insights";
 import { cn } from "@/lib/utils";
 
@@ -35,7 +36,7 @@ export function HabitStreakVisual({
       <div className="scrollbar-hide overflow-x-auto overscroll-x-contain">
         <ul className="flex w-max min-w-full items-center gap-0.5">
           {timeline.map(({ dateStr, met }) => {
-            const label = format(parseISO(dateStr), "EEE, MMM d");
+            const label = format(parseLocalDateStr(dateStr), "EEE, MMM d");
             return (
               <li key={dateStr}>
                 <span

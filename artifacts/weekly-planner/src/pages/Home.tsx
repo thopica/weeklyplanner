@@ -68,6 +68,17 @@ export default function Home() {
   }, [location]);
 
   useEffect(() => {
+    if (location !== "/") return;
+    const refresh = () => loadData(selectedDateStr);
+    window.addEventListener("focus", refresh);
+    window.addEventListener("storage", refresh);
+    return () => {
+      window.removeEventListener("focus", refresh);
+      window.removeEventListener("storage", refresh);
+    };
+  }, [location, selectedDateStr]);
+
+  useEffect(() => {
     return () => {
       if (saveStatusTimerRef.current) clearTimeout(saveStatusTimerRef.current);
     };
@@ -98,7 +109,15 @@ export default function Home() {
 
   const handleDataChange = (newData: DayData) => {
     setDayData(newData);
-    saveDayData(selectedDateStr, newData);
+    const result = saveDayData(selectedDateStr, newData);
+    if (!result.ok) {
+      toast({
+        title: "Could not save",
+        description: result.message,
+        variant: "destructive",
+      });
+      return;
+    }
     setPlannerData(getPlannerData());
     setSaveStatus("saved");
     if (saveStatusTimerRef.current) clearTimeout(saveStatusTimerRef.current);
@@ -122,7 +141,15 @@ export default function Home() {
       });
       return;
     }
-    savePlannerData(next);
+    const saveResult = savePlannerData(next);
+    if (!saveResult.ok) {
+      toast({
+        title: "Could not save move",
+        description: saveResult.message,
+        variant: "destructive",
+      });
+      return;
+    }
     setPlannerData(next);
     setDayData(getDayData(selectedDateStr));
     toast({

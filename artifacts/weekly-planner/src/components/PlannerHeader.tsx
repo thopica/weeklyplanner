@@ -1,5 +1,6 @@
 import { useRef, type ReactNode } from "react";
-import { format, parseISO, getWeek } from "date-fns";
+import { format, getWeek } from "date-fns";
+import { parseLocalDateStr } from "@/lib/dates";
 import { Link } from "wouter";
 import { Settings, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -26,7 +27,7 @@ export function PlannerHeader({
   trailing,
 }: PlannerHeaderProps) {
   const dateInputRef = useRef<HTMLInputElement>(null);
-  const selectedDate = parseISO(selectedDateStr);
+  const selectedDate = parseLocalDateStr(selectedDateStr);
   const weekNumber = getWeek(selectedDate, { weekStartsOn: 1 });
   const year = format(selectedDate, "yyyy");
   const workweekDays = getWorkweekDays(selectedDateStr);

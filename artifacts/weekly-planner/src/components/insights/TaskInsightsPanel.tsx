@@ -1,5 +1,6 @@
-import { format, parseISO } from "date-fns";
+import { format } from "date-fns";
 import { Link } from "wouter";
+import { parseLocalDateStr } from "@/lib/dates";
 import type { TaskInsights } from "@/lib/insights";
 import { formatInsightsBacklogAge } from "@/lib/insights";
 
@@ -113,7 +114,7 @@ export function TaskInsightsPanel({ tasks }: TaskInsightsPanelProps) {
                 }
                 detail={
                   tasks.oldestOpenBacklogDateStr
-                    ? `Oldest: ${format(parseISO(tasks.oldestOpenBacklogDateStr), "MMM d")} (${formatInsightsBacklogAge(tasks.oldestOpenBacklogDateStr, range.endDateStr)})`
+                    ? `Oldest: ${format(parseLocalDateStr(tasks.oldestOpenBacklogDateStr), "MMM d")} (${formatInsightsBacklogAge(tasks.oldestOpenBacklogDateStr, range.endDateStr)})`
                     : tasks.openBacklogDayCount > 0
                       ? `${tasks.openBacklogDayCount} past days with open tasks`
                       : undefined

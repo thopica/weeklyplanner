@@ -1,8 +1,10 @@
+import { useEffect } from "react";
 import { X, Pause, Play, RotateCcw, SkipForward } from "lucide-react";
 import { motion, useReducedMotion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { usePomodoro } from "@/components/pomodoro/PomodoroProvider";
 import { PomodoroCountdownEditor } from "@/components/pomodoro/PomodoroCountdownEditor";
+import { useFocusTrap } from "@/hooks/use-focus-trap";
 import { phaseLabel, type PomodoroPhase } from "@/lib/pomodoro";
 import { tasteTransition } from "@/lib/motion";
 import { cn } from "@/lib/utils";
@@ -53,12 +55,25 @@ export function PomodoroFocusOverlay({
   const urgent =
     !interstitial && status === "running" && remainingSeconds > 0 && remainingSeconds <= 10;
 
+  const overlayRef = useFocusTrap(true, onExit);
+  const mainFocusId = "pomodoro-main-focus";
+
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, []);
+
   return (
     <motion.div
+      ref={overlayRef}
       className="fixed inset-0 z-100 flex flex-col bg-background"
       role="dialog"
       aria-modal="true"
-      aria-label="Pomodoro focus mode"
+      aria-labelledby="pomodoro-focus-title"
+      aria-describedby={mainFocusText && phase === "focus" && !interstitial ? mainFocusId : undefined}
       data-testid="pomodoro-overlay"
     >
       <motion.div
@@ -147,6 +162,7 @@ export function PomodoroFocusOverlay({
         )}
 
         <motion.p
+          id="pomodoro-focus-title"
           key={phaseTitle}
           initial={reduceMotion ? false : { opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
@@ -157,8 +173,11 @@ export function PomodoroFocusOverlay({
         </motion.p>
 
         {mainFocusText && phase === "focus" && !interstitial && (
-          <p className="type-ui mb-6 max-w-md text-center text-foreground/80">
-            {mainFocusText}
+          <p
+            id={mainFocusId}
+            className="type-ui mb-6 max-w-md text-center text-foreground/80"
+          >
+            Today&apos;s focus: {mainFocusText}
           </p>
         )}
 

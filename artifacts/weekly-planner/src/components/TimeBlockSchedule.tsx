@@ -329,7 +329,7 @@ export function TimeBlockSchedule({ blocks, onChange, range }: TimeBlockSchedule
           <ScheduleSlotGrid
             range={range}
             interactive
-            onSlotClick={(m) => {
+            onSlotDoubleClick={(m) => {
               if (resize) return;
               handleSlotDoubleClick(m);
             }}

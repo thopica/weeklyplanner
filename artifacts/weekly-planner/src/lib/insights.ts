@@ -2,13 +2,13 @@ import {
   addDays,
   differenceInCalendarDays,
   format,
-  parseISO,
   startOfWeek,
   subDays,
 } from "date-fns";
 import { isQuantifiableHabitMet, normalizeHabitLog } from "@/lib/habits";
 import type { DayData, HabitDefinition, PlannerData, Task } from "@/lib/types";
-import { todayStr } from "@/lib/storage";
+import { parseLocalDateStr } from "@/lib/dates";
+import { getDayData, todayStr } from "@/lib/storage";
 import { isMeaningfulTask } from "@/lib/tasks";
 
 export type InsightsPeriodDays = 7 | 30 | 90;
@@ -92,7 +92,7 @@ export interface InsightsSummary {
 
 function taskCreatedDateStr(task: Task): string {
   try {
-    return format(parseISO(task.createdAt), "yyyy-MM-dd");
+    return format(new Date(task.createdAt), "yyyy-MM-dd");
   } catch {
     return "";
   }
@@ -100,7 +100,7 @@ function taskCreatedDateStr(task: Task): string {
 
 function habitExistedOnDate(habit: HabitDefinition, dateStr: string): boolean {
   try {
-    const created = format(parseISO(habit.createdAt), "yyyy-MM-dd");
+    const created = format(new Date(habit.createdAt), "yyyy-MM-dd");
     return dateStr >= created;
   } catch {
     return true;
@@ -119,11 +119,6 @@ function isHabitMetOnDay(
   return isQuantifiableHabitMet(normalizeHabitLog(log, habit), habit);
 }
 
-/** Parse YYYY-MM-DD at local noon (avoids UTC day-shift bugs). */
-function parseLocalDateStr(dateStr: string): Date {
-  return parseISO(`${dateStr}T12:00:00`);
-}
-
 export function getInsightsDateRange(periodDays: InsightsPeriodDays): InsightsDateRange {
   const endDateStr = todayStr();
   const end = parseLocalDateStr(endDateStr);
@@ -134,10 +129,6 @@ export function getInsightsDateRange(periodDays: InsightsPeriodDays): InsightsDa
     dateStrs.push(format(addDays(start, i), "yyyy-MM-dd"));
   }
   return { periodDays, startDateStr, endDateStr, dateStrs };
-}
-
-function getDayRaw(data: PlannerData, dateStr: string): DayData | undefined {
-  return data.days[dateStr];
 }
 
 function analyzeTasksForDay(
@@ -187,7 +178,7 @@ export function aggregateTaskInsights(
 ): TaskInsights {
   const today = range.endDateStr;
   const daySnapshots = range.dateStrs.map((dateStr) =>
-    analyzeTasksForDay(dateStr, getDayRaw(data, dateStr)),
+    analyzeTasksForDay(dateStr, getDayData(dateStr)),
   );
 
   let totalTasks = 0;
@@ -328,7 +319,7 @@ export function aggregateHabitInsights(
     const target = habit.kind === "quantifiable" ? habit.target ?? null : null;
 
     for (const dateStr of eligibleDates) {
-      const day = getDayRaw(data, dateStr);
+      const day = getDayData(dateStr);
       const met = isHabitMetOnDay(habit, day);
       metByDate.set(dateStr, met);
       if (met) daysMet += 1;
@@ -370,7 +361,7 @@ export function aggregateHabitInsights(
   let perfectHabitDays = 0;
   if (habits.length > 0) {
     for (const dateStr of range.dateStrs) {
-      const day = getDayRaw(data, dateStr);
+      const day = getDayData(dateStr);
       const activeHabits = habits.filter((h) => habitExistedOnDate(h, dateStr));
       if (activeHabits.length === 0) continue;
       if (activeHabits.every((h) => isHabitMetOnDay(h, day))) perfectHabitDays += 1;

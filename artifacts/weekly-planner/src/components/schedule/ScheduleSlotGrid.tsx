@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 interface ScheduleSlotGridProps {
   range: DayScheduleRange;
   children?: ReactNode;
-  onSlotClick?: (slotStartMinute: number) => void;
+  onSlotDoubleClick?: (slotStartMinute: number) => void;
   className?: string;
   interactive?: boolean;
   granularity?: ScheduleTimelineGranularity;
@@ -18,7 +18,7 @@ interface ScheduleSlotGridProps {
 export function ScheduleSlotGrid({
   range,
   children,
-  onSlotClick,
+  onSlotDoubleClick,
   className,
   interactive = false,
   granularity = "halfHour",
@@ -30,11 +30,12 @@ export function ScheduleSlotGrid({
       className={cn("relative min-w-0 flex-1", className)}
       style={{ height: timeline.gridHeightPx }}
     >
-      {timeline.ticks.map((m) => (
+      {timeline.ticks.map((m, index) => (
         <div
           key={m}
           className={cn(
-            "absolute left-0 right-0 border-b border-border",
+            "absolute left-0 right-0",
+            index < timeline.ticks.length - 1 && "border-b border-border",
             interactive &&
               "transition-colors motion-reduce:transition-none hover:bg-surface-subtle",
           )}
@@ -42,11 +43,11 @@ export function ScheduleSlotGrid({
             top: timeline.minuteToTop(m),
             height: timeline.rowHeightPx,
           }}
-          onClick={onSlotClick ? () => onSlotClick(m) : undefined}
           onDoubleClick={
-            onSlotClick
+            onSlotDoubleClick
               ? (e) => {
                   e.preventDefault();
+                  onSlotDoubleClick(m);
                 }
               : undefined
           }
