@@ -3,9 +3,10 @@ import { motion } from "framer-motion";
 import { useLocation } from "wouter";
 import { PlannerHeader } from "@/components/PlannerHeader";
 import { PeriodToggle } from "@/components/insights/PeriodToggle";
-import { InsightsSummaryCards } from "@/components/insights/InsightsSummaryCards";
-import { TaskInsightsPanel } from "@/components/insights/TaskInsightsPanel";
-import { HabitInsightsPanel } from "@/components/insights/HabitInsightsPanel";
+import { InsightsHero } from "@/components/insights/InsightsHero";
+import { InsightCardGrid } from "@/components/insights/InsightCard";
+import { TaskMomentumPanel } from "@/components/insights/TaskMomentumPanel";
+import { HabitsMomentumPanel } from "@/components/insights/HabitsMomentumPanel";
 import { getPlannerData, getHabits, getSelectedDate } from "@/lib/storage";
 import {
   type InsightsPeriodDays,
@@ -14,6 +15,11 @@ import {
   aggregateHabitInsights,
   buildInsightsSummary,
 } from "@/lib/insights";
+import {
+  deriveActionableInsights,
+  pickCardInsights,
+  pickHeroInsight,
+} from "@/lib/insight-messages";
 
 export default function InsightsPage() {
   const [location] = useLocation();
@@ -39,7 +45,7 @@ export default function InsightsPage() {
     };
   }, [location]);
 
-  const { tasks, habits, summary } = useMemo(() => {
+  const { tasks, habits, summary, hero, cards } = useMemo(() => {
     void dataVersion;
     const data = getPlannerData();
     const habitDefs = getHabits();
@@ -47,10 +53,14 @@ export default function InsightsPage() {
     const taskInsights = aggregateTaskInsights(data, range);
     const habitInsights = aggregateHabitInsights(data, habitDefs, range);
     const summaryInsights = buildInsightsSummary(taskInsights, habitInsights);
+    const allInsights = deriveActionableInsights(taskInsights, habitInsights);
+    const heroInsight = pickHeroInsight(allInsights);
     return {
       tasks: taskInsights,
       habits: habitInsights,
       summary: summaryInsights,
+      hero: heroInsight,
+      cards: pickCardInsights(allInsights, heroInsight, 3),
     };
   }, [periodDays, dataVersion]);
 
@@ -78,7 +88,7 @@ export default function InsightsPage() {
         id="main-content"
         className="scrollbar-hide flex min-h-0 flex-1 flex-col overflow-y-auto"
       >
-        <div className="mx-auto w-full max-w-3xl space-y-6 px-4 py-4 sm:px-5 sm:py-6">
+        <div className="mx-auto w-full max-w-4xl space-y-6 px-4 py-4 sm:px-5 sm:py-6">
           <div>
             <h1 className="type-page-title text-foreground">Insights</h1>
             <p className="type-meta mt-1 text-muted-foreground">
@@ -95,10 +105,17 @@ export default function InsightsPage() {
             </p>
           ) : null}
 
-          <InsightsSummaryCards summary={summary} />
+          <InsightsHero
+            hero={hero}
+            finishRate={tasks.finishRate}
+            periodDays={periodDays}
+            hasEnoughData={summary.hasEnoughData}
+          />
 
-          <TaskInsightsPanel tasks={tasks} />
-          <HabitInsightsPanel habits={habits} />
+          <InsightCardGrid insights={cards} />
+
+          <TaskMomentumPanel tasks={tasks} />
+          <HabitsMomentumPanel habits={habits} />
         </div>
       </main>
     </motion.div>
