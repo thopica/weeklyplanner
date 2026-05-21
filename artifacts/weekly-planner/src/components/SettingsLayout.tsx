@@ -24,7 +24,14 @@ export function SettingsLayout({ children }: SettingsLayoutProps) {
           Settings
         </h1>
         <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-          Configure your planner once—theme, schedule, habits, and backups.
+          Configure your planner once—theme, schedule, habits, and backups.{" "}
+          <Link
+            href="/guide"
+            className="font-medium text-primary underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            data-testid="link-guide"
+          >
+            Setup and keeping your data safe
+          </Link>
         </p>
         <div className="mt-8 space-y-8">{children}</div>
       </main>

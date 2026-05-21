@@ -10,6 +10,7 @@ import InsightsPage from "@/pages/Insights";
 import SettingsPage from "@/pages/Settings";
 import PrivacyPage from "@/pages/privacy";
 import TermsPage from "@/pages/terms";
+import GuidePage from "@/pages/guide";
 import { useEffect } from "react";
 import { PomodoroProvider } from "@/components/pomodoro/PomodoroProvider";
 import { getColorMode, getTheme, initAppearance } from "@/lib/storage";
@@ -25,6 +26,7 @@ function Router() {
       <Route path="/settings" component={SettingsPage} />
       <Route path="/privacy" component={PrivacyPage} />
       <Route path="/terms" component={TermsPage} />
+      <Route path="/guide" component={GuidePage} />
       <Route component={NotFound} />
     </Switch>
   );

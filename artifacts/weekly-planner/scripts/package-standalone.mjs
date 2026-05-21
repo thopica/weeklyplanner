@@ -16,28 +16,28 @@ const zipPath = path.join(releaseRoot, "weekly-planner.zip");
 const readme = `Weekly Planner — offline app
 ================================
 
-HOW TO USE (pick one)
+HOW TO USE
 
-RECOMMENDED — Open Weekly Planner launcher
-  macOS:   Double-click "Open Weekly Planner.command"
-  Windows: Double-click "Open Weekly Planner.bat"
-  Your browser opens the app on your computer. Press Enter in the terminal window to stop the server when done.
-
-ALTERNATIVE — Open index.html directly
-  1. Double-click "index.html" (or right-click → Open With → your browser).
-  2. If the page is blank, use the launcher above instead.
+1. Double-click "index.html" (or right-click → Open With → your browser).
+2. Bookmark the page after it opens for quick access next time.
 
 Your data stays in this browser on this computer. Use Settings → Export backup to save a copy.
+Open Settings → Setup and keeping your data safe for the full in-app guide.
+
+OPTIONAL — If the page is blank
+  macOS:   Double-click "Open Weekly Planner.command"
+  Windows: Double-click "Open Weekly Planner.bat"
+  (Requires Python 3 — install from python.org on Windows if needed.)
+  Press Enter in the terminal window when you are done.
 
 REQUIREMENTS
 - A modern web browser (Chrome, Edge, Firefox, or Safari).
-- Launcher: Python 3 (pre-installed on most Macs; install from python.org on Windows if needed).
 - Internet only needed the first time for fonts (Google Fonts). After that, the app works offline.
 
 TIPS
-- Bookmark the page after it opens for quick access.
-- When using index.html directly, navigation uses the address bar hash (e.g. index.html#/week).
+- Navigation uses the address bar hash (e.g. index.html#/week).
 - Do not delete this folder while using the app; your planner data is stored in the browser.
+- Always open the same index.html from this folder so your data stays in one place.
 
 © Local-first planner — nothing is sent to a server unless you export data yourself.
 `;
