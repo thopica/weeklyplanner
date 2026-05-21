@@ -114,13 +114,13 @@ export function WorkweekBoard({ anchorDateStr, range, onOpenDay }: WorkweekBoard
         {scrollEdges.left ? (
           <div
             aria-hidden
-            className="pointer-events-none absolute inset-y-0 left-0 z-20 w-8 bg-linear-to-r from-canvas to-transparent"
+            className="pointer-events-none absolute inset-y-0 left-0 z-20 w-8 bg-linear-to-r from-canvas to-transparent dark:from-background"
           />
         ) : null}
         {scrollEdges.right ? (
           <div
             aria-hidden
-            className="pointer-events-none absolute inset-y-0 right-0 z-20 w-8 bg-linear-to-l from-canvas to-transparent"
+            className="pointer-events-none absolute inset-y-0 right-0 z-20 w-8 bg-linear-to-l from-canvas to-transparent dark:from-background"
           />
         ) : null}
       </div>

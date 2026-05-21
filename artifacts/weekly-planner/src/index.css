@@ -301,23 +301,23 @@
 }
 
 /* Planner shells — light-mode page canvas only (cards keep theme --card) */
-.theme-boho .planner-canvas {
+html:not(.dark).theme-boho .planner-canvas {
   --canvas: 36 22% 98%;
 }
 
-.theme-blush .planner-canvas {
+html:not(.dark).theme-blush .planner-canvas {
   --canvas: 0 45% 98%;
 }
 
-.theme-matcha .planner-canvas {
+html:not(.dark).theme-matcha .planner-canvas {
   --canvas: 86 24% 98%;
 }
 
-.theme-lavender .planner-canvas {
+html:not(.dark).theme-lavender .planner-canvas {
   --canvas: 262 30% 98%;
 }
 
-.theme-minimal .planner-canvas {
+html:not(.dark).theme-minimal .planner-canvas {
   --canvas: 0 0% 99%;
 }
 
@@ -490,6 +490,49 @@
     0 1px 0 hsl(0 0% 100% / 0.04),
     0 10px 26px -6px hsl(0 0% 0% / 0.5),
     0 26px 52px -18px hsl(0 0% 0% / 0.35);
+}
+
+/* Global dark mode — muted pastels (theme-independent; supersedes .dark.theme-* above) */
+html.dark.theme-boho,
+html.dark.theme-blush,
+html.dark.theme-matcha,
+html.dark.theme-lavender,
+html.dark.theme-minimal {
+  --background: 0 0% 17%;
+  --foreground: 0 0% 89%;
+  --card: 0 0% 22%;
+  --card-foreground: 0 0% 89%;
+  --card-border: 0 0% 32%;
+  --popover: 0 0% 22%;
+  --popover-foreground: 0 0% 89%;
+  --popover-border: 0 0% 32%;
+  --primary: 278 39% 72%;
+  --primary-foreground: 0 0% 17%;
+  --secondary: 351 60% 82%;
+  --secondary-foreground: 0 0% 17%;
+  --muted: 0 0% 21%;
+  --muted-foreground: 0 0% 65%;
+  --accent: 186 25% 22%;
+  --accent-foreground: 186 42% 76%;
+  --destructive: 0 72% 55%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 0 0% 32%;
+  --border-strong: 0 0% 40%;
+  --input: 0 0% 32%;
+  --ring: 278 39% 72%;
+  --surface-subtle: 0 0% 20%;
+  --surface-accent: 278 22% 24%;
+  --foreground-subtle: 0 0% 72%;
+  --placeholder-foreground: 0 0% 55%;
+  --field-background: 0 0% 14%;
+  --shadow-tinted:
+    0 1px 0 hsl(0 0% 100% / 0.04),
+    0 10px 26px -6px hsl(0 0% 0% / 0.45),
+    0 26px 52px -18px hsl(0 0% 0% / 0.35);
+}
+
+.dark .planner-canvas {
+  --canvas: var(--background);
 }
 
 @layer base {

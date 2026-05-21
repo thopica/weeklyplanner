@@ -14,10 +14,10 @@ export const WORKWEEK_SUMMARY_HEIGHT = "9.5rem";
 export const WORKWEEK_SUMMARY_HEIGHT_COMPACT = "8rem";
 
 /** Week view: focus/tasks band — matches page canvas above the schedule grid. */
-export const WEEK_SUMMARY_SURFACE_CLASS = "bg-canvas";
+export const WEEK_SUMMARY_SURFACE_CLASS = "bg-canvas dark:bg-card";
 export const WEEK_SCHEDULE_SURFACE_CLASS = "bg-surface-subtle";
-/** Time-rail spacer above hours — matches page background (#F4F1EA on default theme). */
-export const WEEK_RAIL_TOP_SPACER_CLASS = "bg-canvas";
+/** Time-rail spacer above hours — matches page canvas in light, background in dark. */
+export const WEEK_RAIL_TOP_SPACER_CLASS = "bg-canvas dark:bg-background";
 
 export function getWorkweekStart(date: Date): Date {
   return startOfWeek(date, { weekStartsOn: 1 });

@@ -53,7 +53,7 @@ export function WorkweekDayColumn({
 
   return (
     <article
-      className="flex min-w-[7rem] flex-1 basis-0 flex-col overflow-hidden rounded-xl border border-border bg-canvas"
+      className="flex min-w-[7rem] flex-1 basis-0 flex-col overflow-hidden rounded-xl border border-border bg-canvas dark:bg-card"
       aria-labelledby={`workweek-day-${dateStr}`}
       data-testid={`workweek-column-${dateStr}`}
     >

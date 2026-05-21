@@ -30,7 +30,7 @@ export function ColorModeSettings({
         Appearance
       </h2>
       <p className="type-section-desc mb-4">
-        Dark mode applies to your selected color theme.
+        Dark mode uses a shared calm palette. Color theme applies in light mode.
       </p>
       <div
         role="radiogroup"
