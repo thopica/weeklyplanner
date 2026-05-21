@@ -8,7 +8,7 @@ interface InsightCardProps {
 
 const toneAccent: Record<ActionableInsight["tone"], string> = {
   celebrate: "bg-primary/5",
-  neutral: "bg-card",
+  neutral: "planner-card-surface",
   nudge: "bg-surface-subtle",
 };
 

@@ -94,7 +94,7 @@ export function DataManagementSettings({
 
   return (
     <section
-      className="rounded-xl border border-border bg-card p-5 shadow-sm"
+      className="planner-card-surface rounded-xl border border-border p-5"
       data-testid="settings-data-section"
     >
       <h2 className="mb-4 text-sm font-semibold uppercase tracking-widest text-muted-foreground">

@@ -48,7 +48,7 @@ export default function MonthPage() {
 
   return (
     <motion.div
-      className="relative isolate flex h-dvh max-h-dvh min-h-dvh flex-col overflow-hidden bg-background"
+      className="planner-canvas relative isolate flex h-dvh max-h-dvh min-h-dvh flex-col overflow-hidden bg-canvas"
       data-testid="month-view-root"
     >
       <a

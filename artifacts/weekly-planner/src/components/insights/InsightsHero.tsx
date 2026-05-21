@@ -25,7 +25,7 @@ export function InsightsHero({
   return (
     <div
       className={cn(
-        "flex flex-col gap-4 rounded-xl border border-border bg-card p-5 sm:flex-row sm:items-center sm:justify-between",
+        "planner-card-surface flex flex-col gap-4 rounded-xl border border-border p-5 sm:flex-row sm:items-center sm:justify-between",
         hero?.tone === "celebrate" && "bg-primary/5",
       )}
       data-testid="insights-hero"

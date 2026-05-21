@@ -323,7 +323,7 @@ export function TimeBlockSchedule({ blocks, onChange, range }: TimeBlockSchedule
       className="flex h-full min-h-0 flex-col"
       data-testid="time-block-schedule"
     >
-      <div className="scrollbar-hide min-h-0 flex-1 overflow-y-auto">
+      <div className="planner-scroll min-h-0 flex-1 overflow-y-auto" data-planner-scroll="">
         <div className="flex px-3 py-3 sm:px-4 sm:py-4">
           <ScheduleTimeRail range={range} />
           <ScheduleSlotGrid

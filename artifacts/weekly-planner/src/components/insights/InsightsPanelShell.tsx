@@ -17,7 +17,7 @@ export function InsightsPanelShell({
 }: InsightsPanelShellProps) {
   return (
     <section
-      className="overflow-hidden rounded-xl border border-border bg-card"
+      className="planner-card-surface overflow-hidden rounded-xl border border-border"
       aria-labelledby={headingId}
       data-testid={testId}
     >

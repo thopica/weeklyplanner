@@ -27,10 +27,8 @@ export function GuideSection({
     <motion.section
       variants={guideStaggerChild}
       className={cn(
-        "scroll-mt-4 overflow-hidden rounded-xl border border-border bg-card",
-        isEmphasis
-          ? "border-primary/20 shadow-tinted"
-          : "shadow-[0_12px_28px_-18px_hsl(var(--foreground)/0.12)]",
+        "planner-card-surface scroll-mt-4 overflow-hidden rounded-xl border border-border",
+        isEmphasis && "border-primary/20",
         className,
       )}
     >

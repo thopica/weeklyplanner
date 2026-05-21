@@ -187,7 +187,7 @@ export default function Home() {
 
   return (
     <motion.div
-      className="relative isolate flex h-dvh max-h-dvh min-h-dvh flex-col overflow-hidden bg-background"
+      className="planner-canvas relative isolate flex h-dvh max-h-dvh min-h-dvh flex-col overflow-hidden bg-canvas"
       data-testid="app-root"
     >
       <a
@@ -224,9 +224,10 @@ export default function Home() {
             transition={tasteTransition(reduceMotion, tasteSpringContent)}
             className={cn(
               "flex min-h-0 flex-1 flex-col",
-              "max-lg:overflow-y-auto max-lg:scrollbar-hide",
+              "planner-scroll max-lg:overflow-y-auto",
               scheduleVisible ? "lg:flex-row lg:overflow-hidden" : "lg:overflow-hidden",
             )}
+            data-planner-scroll=""
           >
             {/* Left: one scrollable column — five section cards */}
             <motion.div
@@ -238,10 +239,11 @@ export default function Home() {
             >
               <motion.div
                 className={cn(
-                  "px-4 py-3 sm:px-5",
+                  "planner-scroll px-4 py-3 sm:px-5",
                   "max-lg:overflow-visible",
-                  "lg:scrollbar-hide lg:h-full lg:overflow-y-auto",
+                  "lg:h-full lg:overflow-y-auto",
                 )}
+                data-planner-scroll=""
                 variants={sectionStaggerParent}
                 initial={reduceMotion ? false : "hidden"}
                 animate={reduceMotion ? undefined : "show"}

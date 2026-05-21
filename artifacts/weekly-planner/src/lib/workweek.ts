@@ -13,11 +13,11 @@ export const WORKWEEK_SUMMARY_HEIGHT = "9.5rem";
 /** Compact summary height below xl (~13" laptops). */
 export const WORKWEEK_SUMMARY_HEIGHT_COMPACT = "8rem";
 
-/** Week view: focus/tasks vs schedule (calendar) surfaces. */
-export const WEEK_SUMMARY_SURFACE_CLASS = "bg-card";
+/** Week view: focus/tasks band — matches page canvas above the schedule grid. */
+export const WEEK_SUMMARY_SURFACE_CLASS = "bg-canvas";
 export const WEEK_SCHEDULE_SURFACE_CLASS = "bg-surface-subtle";
 /** Time-rail spacer above hours — matches page background (#F4F1EA on default theme). */
-export const WEEK_RAIL_TOP_SPACER_CLASS = "bg-background";
+export const WEEK_RAIL_TOP_SPACER_CLASS = "bg-canvas";
 
 export function getWorkweekStart(date: Date): Date {
   return startOfWeek(date, { weekStartsOn: 1 });

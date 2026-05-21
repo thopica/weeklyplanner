@@ -7,6 +7,7 @@
 
 @theme inline {
   --color-background: hsl(var(--background));
+  --color-canvas: hsl(var(--canvas, var(--background)));
   --color-foreground: hsl(var(--foreground));
   --color-border: hsl(var(--border));
   --color-border-strong: hsl(var(--border-strong));
@@ -299,6 +300,27 @@
   --radius: 0.5rem;
 }
 
+/* Planner shells — light-mode page canvas only (cards keep theme --card) */
+.theme-boho .planner-canvas {
+  --canvas: 36 22% 98%;
+}
+
+.theme-blush .planner-canvas {
+  --canvas: 0 45% 98%;
+}
+
+.theme-matcha .planner-canvas {
+  --canvas: 86 24% 98%;
+}
+
+.theme-lavender .planner-canvas {
+  --canvas: 262 30% 98%;
+}
+
+.theme-minimal .planner-canvas {
+  --canvas: 0 0% 99%;
+}
+
 /* Dark mode — per theme (html has .dark + .theme-*) */
 .dark.theme-boho {
   --background: 25 20% 10%;
@@ -485,6 +507,13 @@
     @apply border-border;
   }
 
+  html,
+  body {
+    overflow: hidden;
+    height: 100dvh;
+    max-height: 100dvh;
+  }
+
   body {
     @apply relative font-sans antialiased bg-background text-foreground transition-colors duration-500;
     font-size: var(--text-body);
@@ -503,7 +532,9 @@
     position: relative;
     z-index: 1;
     isolation: isolate;
+    height: 100dvh;
     min-height: 100dvh;
+    overflow: hidden;
   }
 
   .font-serif {
@@ -516,7 +547,91 @@
   }
 }
 
+@layer components {
+  .planner-card-surface {
+    background-color: hsl(var(--card) / 0.9);
+    box-shadow: var(--shadow-tinted);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+
+  .dark .planner-card-surface {
+    background-color: hsl(var(--card) / 0.85);
+  }
+
+  @media (prefers-reduced-transparency: reduce) {
+    .planner-card-surface {
+      background-color: hsl(var(--card));
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
+    }
+  }
+
+  /* Hide scrollbars on planner views (includes lg:overflow-y-auto etc.) */
+  .planner-scroll,
+  [data-planner-scroll],
+  .planner-canvas [class*="overflow-y-auto"],
+  .planner-canvas [class*="overflow-x-auto"],
+  .planner-canvas [class*="overflow-auto"] {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .planner-scroll::-webkit-scrollbar,
+  [data-planner-scroll]::-webkit-scrollbar,
+  .planner-canvas [class*="overflow-y-auto"]::-webkit-scrollbar,
+  .planner-canvas [class*="overflow-x-auto"]::-webkit-scrollbar,
+  .planner-canvas [class*="overflow-auto"]::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    height: 0;
+  }
+
+  .planner-scroll::-webkit-scrollbar-thumb,
+  [data-planner-scroll]::-webkit-scrollbar-thumb,
+  .planner-canvas [class*="overflow-y-auto"]::-webkit-scrollbar-thumb,
+  .planner-canvas [class*="overflow-x-auto"]::-webkit-scrollbar-thumb,
+  .planner-canvas [class*="overflow-auto"]::-webkit-scrollbar-thumb {
+    background: transparent;
+  }
+
+  .planner-scroll::-webkit-scrollbar-track,
+  [data-planner-scroll]::-webkit-scrollbar-track,
+  .planner-canvas [class*="overflow-y-auto"]::-webkit-scrollbar-track,
+  .planner-canvas [class*="overflow-x-auto"]::-webkit-scrollbar-track,
+  .planner-canvas [class*="overflow-auto"]::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .week-column-summary {
+    overflow-y: auto;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .week-column-summary::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    height: 0;
+  }
+}
+
 @layer utilities {
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    height: 0;
+  }
+
+  .bg-canvas {
+    background-color: hsl(var(--canvas, var(--background)));
+  }
+
   .shadow-tinted {
     box-shadow: var(--shadow-tinted);
   }
@@ -630,4 +745,53 @@
   --shadow-field-focus:
     0 2px 6px hsl(0 0% 0% / 0.45),
     0 1px 0 hsl(0 0% 100% / 0.07) inset;
+}
+
+/* Unlayered — wins Tailwind cascade */
+html,
+body {
+  overflow: hidden !important;
+  height: 100dvh !important;
+  max-height: 100dvh !important;
+}
+
+#root {
+  overflow: hidden !important;
+  height: 100dvh !important;
+  max-height: 100dvh !important;
+}
+
+/* Pin planner shells to viewport so document never scrolls */
+.planner-canvas {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  overflow: hidden;
+  width: 100%;
+  max-height: 100dvh;
+}
+
+/* Hide scrollbars on scrollable regions inside planner */
+.planner-scroll,
+[data-planner-scroll],
+.planner-canvas,
+.planner-canvas * {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
+.planner-canvas::-webkit-scrollbar,
+.planner-canvas *::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  -webkit-appearance: none !important;
+  background: transparent !important;
+}
+
+.planner-canvas::-webkit-scrollbar-thumb,
+.planner-canvas *::-webkit-scrollbar-thumb,
+.planner-canvas::-webkit-scrollbar-track,
+.planner-canvas *::-webkit-scrollbar-track {
+  background: transparent !important;
 }

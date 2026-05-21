@@ -92,7 +92,7 @@ export default function InsightsPage() {
 
   return (
     <motion.div
-      className="relative isolate flex h-dvh max-h-dvh min-h-dvh flex-col overflow-hidden bg-background"
+      className="planner-canvas relative isolate flex h-dvh max-h-dvh min-h-dvh flex-col overflow-hidden bg-canvas"
       data-testid="insights-view-root"
     >
       <a
@@ -112,7 +112,7 @@ export default function InsightsPage() {
 
       <main
         id="main-content"
-        className="scrollbar-hide flex min-h-0 flex-1 flex-col overflow-y-auto"
+        className="planner-scroll flex min-h-0 flex-1 flex-col overflow-y-auto"
       >
         <motion.div
           className="mx-auto w-full max-w-4xl space-y-6 px-4 py-4 sm:px-5 sm:py-6"

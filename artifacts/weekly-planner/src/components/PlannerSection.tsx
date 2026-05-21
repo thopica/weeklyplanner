@@ -67,7 +67,9 @@ export function PlannerSection({
       data-testid={dataTestId}
       className={cn(
         "scroll-mt-4",
-        layout === "standalone" && !isSubtle && "mb-8 overflow-hidden rounded-xl border border-border bg-card",
+        layout === "standalone" &&
+          !isSubtle &&
+          "planner-card-surface mb-8 overflow-hidden rounded-xl border border-border",
         isSegment && segmentDivider && "border-t border-border-strong",
         className,
       )}

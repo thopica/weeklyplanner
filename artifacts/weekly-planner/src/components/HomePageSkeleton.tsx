@@ -9,7 +9,10 @@ export function HomePageSkeleton() {
       aria-label="Loading planner"
     >
       {Array.from({ length: 5 }, (_, i) => (
-        <div key={i} className="rounded-xl border border-border bg-card p-4">
+        <div
+          key={i}
+          className="planner-card-surface rounded-xl border border-border p-4"
+        >
           <Skeleton className="h-4 w-32" />
           <Skeleton className="mt-3 h-10 w-full" />
           {i === 1 ? <Skeleton className="mt-2 h-24 w-full" /> : null}

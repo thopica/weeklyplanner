@@ -6,7 +6,11 @@ import { getDayTaskSummary, isMeaningfulTask, mergeDayTasks } from "@/lib/tasks"
 import { IncompleteDayIndicator } from "@/components/IncompleteDayIndicator";
 import type { DayScheduleRange } from "@/lib/schedule";
 import { WorkweekScheduleColumn } from "@/components/schedule/WorkweekScheduleColumn";
-import { WEEK_SCHEDULE_SURFACE_CLASS } from "@/lib/workweek";
+import {
+  WEEK_SCHEDULE_SURFACE_CLASS,
+  WEEK_SUMMARY_SURFACE_CLASS,
+  WORKWEEK_DAY_HEADER_HEIGHT,
+} from "@/lib/workweek";
 import { cn } from "@/lib/utils";
 
 interface WorkweekDayColumnProps {
@@ -49,7 +53,7 @@ export function WorkweekDayColumn({
 
   return (
     <article
-      className="flex min-w-[7rem] flex-1 basis-0 flex-col overflow-hidden rounded-xl border border-border bg-card"
+      className="flex min-w-[7rem] flex-1 basis-0 flex-col overflow-hidden rounded-xl border border-border bg-canvas"
       aria-labelledby={`workweek-day-${dateStr}`}
       data-testid={`workweek-column-${dateStr}`}
     >
@@ -57,10 +61,13 @@ export function WorkweekDayColumn({
         type="button"
         id={`workweek-day-${dateStr}`}
         onClick={() => onOpenDay(dateStr)}
+        style={{ height: WORKWEEK_DAY_HEADER_HEIGHT }}
         className={cn(
-          "flex shrink-0 flex-col justify-center border-b border-border px-3 py-2.5 text-left transition-colors 2xl:px-4 2xl:py-3",
+          "box-border flex shrink-0 flex-col justify-center border-b border-border px-3 py-2.5 text-left transition-colors 2xl:px-4",
           "hover:bg-accent/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
-          isToday && "bg-primary text-primary-foreground hover:bg-primary/90",
+          isToday
+            ? "bg-primary text-primary-foreground hover:bg-primary/90"
+            : WEEK_SUMMARY_SURFACE_CLASS,
         )}
       >
         <div className="flex items-center justify-between gap-2">
@@ -99,7 +106,12 @@ export function WorkweekDayColumn({
         </div>
       </button>
 
-      <div className="h-32 shrink-0 overflow-y-auto border-b border-border px-3 py-2.5 2xl:h-[9.5rem] 2xl:px-4 2xl:py-3">
+      <div
+        className={cn(
+          "week-column-summary h-32 shrink-0 border-b border-border px-3 py-2.5 2xl:h-[9.5rem] 2xl:px-4 2xl:py-3",
+          WEEK_SUMMARY_SURFACE_CLASS,
+        )}
+      >
         <div className="space-y-3 2xl:space-y-4">
           <SummaryBlock label="Focus">
             {focus ? (

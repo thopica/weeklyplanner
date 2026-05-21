@@ -40,7 +40,7 @@ export default function SettingsPage() {
       <ColorModeSettings colorMode={colorMode} onColorModeChange={handleColorModeChange} />
       <ThemeSettings currentTheme={currentTheme} onThemeChange={handleThemeChange} />
       <CalendarHoursSettings key={`cal-${refreshKey}`} onSaved={handleDataReset} />
-      <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
+      <div className="planner-card-surface rounded-xl border border-border p-5">
         <HabitsSettings onHabitsChange={handleDataReset} />
       </div>
       <DataManagementSettings

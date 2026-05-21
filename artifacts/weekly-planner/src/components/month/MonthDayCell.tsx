@@ -32,8 +32,8 @@ export function MonthDayCell({
   return (
     <article
       className={cn(
-        "flex min-w-0 flex-1 flex-col overflow-hidden rounded-xl border border-border bg-card",
-        !inMonth && "bg-surface-subtle/50",
+        "flex min-w-0 flex-1 flex-col overflow-hidden rounded-xl border border-border",
+        inMonth ? "planner-card-surface" : "bg-surface-subtle/50",
       )}
       aria-labelledby={`month-day-${dateStr}`}
       data-testid={`month-cell-${dateStr}`}
@@ -79,7 +79,7 @@ export function MonthDayCell({
       </button>
 
       <div
-        className="shrink-0 overflow-y-auto px-2 py-2 sm:px-3"
+        className="scrollbar-hide shrink-0 overflow-y-auto px-2 py-2 sm:px-3"
         style={{ height: MONTH_CELL_TASK_HEIGHT }}
       >
         {allTasks.length === 0 ? (

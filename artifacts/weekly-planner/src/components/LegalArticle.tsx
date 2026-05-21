@@ -9,7 +9,7 @@ interface LegalArticleProps {
 
 export function LegalArticle({ title, children }: LegalArticleProps) {
   return (
-    <div className="min-h-dvh bg-background font-sans text-foreground">
+    <div className="flex min-h-dvh flex-col overflow-hidden bg-background font-sans text-foreground">
       <header className="border-b border-border bg-card px-6 py-4 shadow-tinted sm:px-10">
         <Link
           href="/"
@@ -19,12 +19,14 @@ export function LegalArticle({ title, children }: LegalArticleProps) {
           Back to planner
         </Link>
       </header>
-      <main className="mx-auto max-w-prose px-6 py-10 sm:px-8 sm:py-14">
-        <h1 className="font-serif text-3xl font-semibold tracking-tight text-balance text-foreground">
-          {title}
-        </h1>
-        <div className="prose prose-neutral mt-8 max-w-none text-muted-foreground prose-headings:font-serif prose-headings:text-foreground prose-p:leading-relaxed">
-          {children}
+      <main className="scrollbar-hide min-h-0 w-full flex-1 overflow-y-auto">
+        <div className="mx-auto w-full max-w-prose px-6 py-10 sm:px-8 sm:py-14">
+          <h1 className="font-serif text-3xl font-semibold tracking-tight text-balance text-foreground">
+            {title}
+          </h1>
+          <div className="prose prose-neutral mt-8 max-w-none text-muted-foreground prose-headings:font-serif prose-headings:text-foreground prose-p:leading-relaxed">
+            {children}
+          </div>
         </div>
       </main>
     </div>

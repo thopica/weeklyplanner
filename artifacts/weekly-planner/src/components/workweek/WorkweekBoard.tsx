@@ -57,30 +57,29 @@ export function WorkweekBoard({ anchorDateStr, range, onOpenDay }: WorkweekBoard
 
   return (
     <section
-      className="flex min-h-0 w-full flex-1 flex-col overflow-hidden px-3 py-3 2xl:px-5"
+      className="scrollbar-hide flex min-h-0 w-full flex-1 flex-col overflow-hidden px-3 py-3 2xl:px-5"
       aria-label={`Week view, ${rangeLabel}`}
       data-testid="workweek-board"
     >
       <div className="relative min-h-0 w-full flex-1">
         <div
           ref={scrollRef}
-          className="flex h-full min-h-0 w-full overflow-x-auto overflow-y-auto"
+          className="planner-scroll flex h-full min-h-0 w-full overflow-x-auto overflow-y-auto"
         >
-          <div className="flex w-full min-w-0 flex-1 items-start gap-2 pb-3 2xl:gap-3">
-            <div className="sticky left-0 z-10 flex shrink-0 flex-col">
+          <div className="scrollbar-hide flex w-full min-w-0 flex-1 items-start gap-2 pb-3 2xl:gap-3">
+            <div
+              className={cn(
+                "sticky left-0 z-10 flex shrink-0 flex-col",
+                WEEK_RAIL_TOP_SPACER_CLASS,
+              )}
+            >
               <div
-                className={cn(
-                  "shrink-0 2xl:hidden",
-                  WEEK_RAIL_TOP_SPACER_CLASS,
-                )}
+                className="shrink-0 2xl:hidden"
                 style={{ height: RAIL_TOP_SPACER_COMPACT }}
                 aria-hidden
               />
               <div
-                className={cn(
-                  "hidden shrink-0 2xl:block",
-                  WEEK_RAIL_TOP_SPACER_CLASS,
-                )}
+                className="hidden shrink-0 2xl:block"
                 style={{ height: RAIL_TOP_SPACER_FULL }}
                 aria-hidden
               />
@@ -115,13 +114,13 @@ export function WorkweekBoard({ anchorDateStr, range, onOpenDay }: WorkweekBoard
         {scrollEdges.left ? (
           <div
             aria-hidden
-            className="pointer-events-none absolute inset-y-0 left-0 z-20 w-8 bg-linear-to-r from-background to-transparent"
+            className="pointer-events-none absolute inset-y-0 left-0 z-20 w-8 bg-linear-to-r from-canvas to-transparent"
           />
         ) : null}
         {scrollEdges.right ? (
           <div
             aria-hidden
-            className="pointer-events-none absolute inset-y-0 right-0 z-20 w-8 bg-linear-to-l from-background to-transparent"
+            className="pointer-events-none absolute inset-y-0 right-0 z-20 w-8 bg-linear-to-l from-canvas to-transparent"
           />
         ) : null}
       </div>

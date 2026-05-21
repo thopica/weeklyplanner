@@ -8,7 +8,7 @@ interface SettingsLayoutProps {
 
 export function SettingsLayout({ children }: SettingsLayoutProps) {
   return (
-    <div className="min-h-dvh bg-background font-sans text-foreground">
+    <div className="planner-canvas flex h-dvh flex-col overflow-hidden bg-canvas font-sans text-foreground">
       <header className="border-b border-border bg-card px-4 py-4 shadow-tinted sm:px-6">
         <Link
           href="/"
@@ -19,21 +19,23 @@ export function SettingsLayout({ children }: SettingsLayoutProps) {
           Back to planner
         </Link>
       </header>
-      <main className="mx-auto max-w-2xl px-4 py-8 sm:px-6 sm:py-10">
-        <h1 className="font-serif text-3xl font-semibold tracking-tight text-foreground">
-          Settings
-        </h1>
-        <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-          Configure your planner once—theme, schedule, habits, and backups.{" "}
-          <Link
-            href="/guide"
-            className="font-medium text-primary underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-            data-testid="link-guide"
-          >
-            Setup and keeping your data safe
-          </Link>
-        </p>
-        <div className="mt-8 space-y-8">{children}</div>
+      <main className="scrollbar-hide min-h-0 w-full flex-1 overflow-y-auto">
+        <div className="mx-auto w-full max-w-2xl px-4 py-8 sm:px-6 sm:py-10">
+          <h1 className="font-serif text-3xl font-semibold tracking-tight text-foreground">
+            Settings
+          </h1>
+          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+            Configure your planner once—theme, schedule, habits, and backups.{" "}
+            <Link
+              href="/guide"
+              className="font-semibold text-foreground underline decoration-foreground/40 underline-offset-2 transition-colors hover:text-primary hover:decoration-primary/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              data-testid="link-guide"
+            >
+              Setup and keeping your data safe
+            </Link>
+          </p>
+          <div className="mt-8 space-y-8">{children}</div>
+        </div>
       </main>
     </div>
   );

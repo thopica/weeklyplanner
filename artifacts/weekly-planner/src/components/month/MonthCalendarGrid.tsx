@@ -20,26 +20,28 @@ export function MonthCalendarGrid({ anchorDateStr, onOpenDay }: MonthCalendarGri
 
   return (
     <section
-      className="flex min-h-0 w-full flex-1 flex-col overflow-y-auto px-2 py-3 sm:px-4 sm:py-3"
+      className="planner-scroll flex min-h-0 w-full flex-1 flex-col overflow-y-auto py-3"
       aria-label={`Month view, ${monthLabel}`}
       data-testid="month-calendar-grid"
     >
-      <div
-        className="sticky top-0 z-10 grid shrink-0 grid-cols-7 gap-1 border-b border-border bg-background pb-2 sm:gap-1.5"
-        role="row"
-      >
-        {MONTH_WEEKDAY_LABELS.map((label) => (
-          <div
-            key={label}
-            role="columnheader"
-            className="flex items-center justify-center py-1"
-          >
-            <span className="type-label text-muted-foreground">{label}</span>
-          </div>
-        ))}
+      <div className="sticky top-0 z-10 shrink-0 border-b border-border bg-canvas">
+        <div
+          className="grid grid-cols-7 gap-1 px-2 pb-2 sm:gap-1.5 sm:px-4"
+          role="row"
+        >
+          {MONTH_WEEKDAY_LABELS.map((label) => (
+            <div
+              key={label}
+              role="columnheader"
+              className="flex items-center justify-center py-1"
+            >
+              <span className="type-label text-muted-foreground">{label}</span>
+            </div>
+          ))}
+        </div>
       </div>
 
-      <div className="flex flex-col gap-1 pt-2 sm:gap-1.5">
+      <div className="flex flex-col gap-1 px-2 pt-2 sm:gap-1.5 sm:px-4">
         {rows.map((week, weekIndex) => (
           <div
             key={`week-${weekIndex}`}
