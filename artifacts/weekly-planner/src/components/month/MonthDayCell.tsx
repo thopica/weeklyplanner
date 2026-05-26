@@ -1,8 +1,15 @@
+import { useMemo, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import { format, parseISO } from "date-fns";
-import { CheckCircle2, Circle } from "lucide-react";
-import type { DayData } from "@/lib/types";
-import { getDayTaskSummary, isMeaningfulTask, mergeDayTasks } from "@/lib/tasks";
-import { IncompleteDayIndicator } from "@/components/IncompleteDayIndicator";
+import type { CalendarEvent, DayData } from "@/lib/types";
+import { isMeaningfulTask, mergeDayTasks } from "@/lib/tasks";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { EventPill } from "@/components/month/EventPill";
+import { TaskCountBadge } from "@/components/month/TaskCountBadge";
+import { useMonthView } from "@/components/month/MonthViewProvider";
 import {
   MONTH_CELL_TASK_HEIGHT,
   MONTH_DAY_HEADER_HEIGHT,
@@ -12,112 +19,168 @@ import { cn } from "@/lib/utils";
 interface MonthDayCellProps {
   dateStr: string;
   dayData: DayData;
+  events: CalendarEvent[];
   inMonth: boolean;
   isToday: boolean;
-  onOpenDay: (dateStr: string) => void;
+  onRequestCreate: (dateStr: string) => void;
+  onRequestEdit: (eventId: string) => void;
+}
+
+const MAX_VISIBLE_PILLS = 3;
+
+function pillTimeLabel(
+  event: CalendarEvent,
+  dateStr: string,
+): string | undefined {
+  if (event.allDay) return undefined;
+  if (event.startsAt.slice(0, 10) !== dateStr) return undefined;
+  return event.startsAt.slice(11, 16);
+}
+
+function compareEvents(a: CalendarEvent, b: CalendarEvent): number {
+  if (a.important !== b.important) return a.important ? -1 : 1;
+  if (a.startsAt < b.startsAt) return -1;
+  if (a.startsAt > b.startsAt) return 1;
+  return 0;
 }
 
 export function MonthDayCell({
   dateStr,
   dayData,
+  events,
   inMonth,
   isToday,
-  onOpenDay,
+  onRequestCreate,
+  onRequestEdit,
 }: MonthDayCellProps) {
   const date = parseISO(`${dateStr}T12:00:00`);
-  const isPastDay = dateStr < format(new Date(), "yyyy-MM-dd");
-  const taskSummary = getDayTaskSummary(dayData);
-  const allTasks = mergeDayTasks(dayData).filter(isMeaningfulTask);
+  const { importantOnly, isCategoryVisible } = useMonthView();
+  const [overflowOpen, setOverflowOpen] = useState(false);
+
+  const taskCount = useMemo(
+    () => mergeDayTasks(dayData).filter(isMeaningfulTask).length,
+    [dayData],
+  );
+
+  const visibleEvents = useMemo(() => {
+    const filtered = events.filter((e) => {
+      if (importantOnly && !e.important) return false;
+      if (!isCategoryVisible(e.categoryId)) return false;
+      return true;
+    });
+    return [...filtered].sort(compareEvents);
+  }, [events, importantOnly, isCategoryVisible]);
+
+  const visible = visibleEvents.slice(0, MAX_VISIBLE_PILLS);
+  const overflow = visibleEvents.slice(MAX_VISIBLE_PILLS);
+
+  const handleCellActivate = () => {
+    onRequestCreate(dateStr);
+  };
+
+  const handleCellKeyDown = (e: ReactKeyboardEvent<HTMLElement>) => {
+    if (e.key !== "Enter" && e.key !== " ") return;
+    if (e.target !== e.currentTarget) return;
+    e.preventDefault();
+    handleCellActivate();
+  };
 
   return (
     <article
+      role="button"
+      tabIndex={0}
+      onClick={handleCellActivate}
+      onKeyDown={handleCellKeyDown}
       className={cn(
-        "flex min-w-0 flex-1 flex-col overflow-hidden rounded-xl border border-border",
+        "flex min-w-0 flex-1 cursor-pointer flex-col overflow-hidden rounded-xl border border-border outline-none transition-colors",
+        "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background",
+        "hover:border-primary/40",
         inMonth ? "planner-card-surface" : "bg-surface-subtle/50",
       )}
       aria-labelledby={`month-day-${dateStr}`}
+      aria-label={`Create event on ${format(date, "EEEE, MMMM d")}`}
       data-testid={`month-cell-${dateStr}`}
     >
-      <button
-        type="button"
-        id={`month-day-${dateStr}`}
-        onClick={() => onOpenDay(dateStr)}
+      <div
         style={{ height: MONTH_DAY_HEADER_HEIGHT }}
-        className={cn(
-          "flex shrink-0 flex-col justify-center border-b border-border px-2 py-2 text-left transition-colors sm:px-3",
-          "hover:bg-accent/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
-          isToday && "bg-primary text-primary-foreground hover:bg-primary/90",
-        )}
+        className="flex shrink-0 items-start justify-between gap-1 px-2 py-2 sm:px-3"
       >
-        <div className="flex items-center justify-between gap-1">
+        {isToday ? (
+          <div className="flex shrink-0 flex-col items-start gap-0.5 rounded-md bg-surface-accent px-1.5 py-1">
+            <span
+              id={`month-day-${dateStr}`}
+              className="text-lead font-semibold tabular-nums leading-none tracking-tight text-primary"
+            >
+              {format(date, "d")}
+            </span>
+            <span className="type-label font-semibold uppercase tracking-wider text-primary">
+              Today
+            </span>
+          </div>
+        ) : (
           <span
+            id={`month-day-${dateStr}`}
             className={cn(
               "text-lead font-semibold tabular-nums tracking-tight",
-              isToday
-                ? "text-primary-foreground"
-                : inMonth
-                  ? "text-foreground"
-                  : "text-muted-foreground",
+              inMonth ? "text-foreground" : "text-muted-foreground",
             )}
           >
             {format(date, "d")}
           </span>
-          <div className="flex items-center gap-1">
-            <IncompleteDayIndicator
-              summary={taskSummary}
-              variant="header"
-              isToday={isToday}
-              isPastDay={isPastDay}
-            />
-            {isToday ? (
-              <span className="type-caption rounded-md bg-primary-foreground/15 px-1 py-0.5 font-semibold text-primary-foreground">
-                Today
-              </span>
-            ) : null}
-          </div>
-        </div>
-      </button>
+        )}
+        <TaskCountBadge count={taskCount} dimmed={!inMonth} />
+      </div>
 
       <div
-        className="scrollbar-hide shrink-0 overflow-y-auto px-2 py-2 sm:px-3"
+        className="flex min-h-0 flex-col gap-1 px-1.5 pb-2"
         style={{ height: MONTH_CELL_TASK_HEIGHT }}
       >
-        {allTasks.length === 0 ? (
-          <p className="type-caption text-muted-foreground">No tasks</p>
-        ) : (
-          <ul className="space-y-1.5">
-            {allTasks.map((task) => (
-              <li
-                key={task.id}
-                className="flex min-h-8 items-start gap-1.5 sm:gap-2"
+        {visible.map((event) => (
+          <EventPill
+            key={event.id}
+            event={event}
+            timeLabel={pillTimeLabel(event, dateStr)}
+            onClick={() => onRequestEdit(event.id)}
+          />
+        ))}
+        {overflow.length > 0 ? (
+          <Popover open={overflowOpen} onOpenChange={setOverflowOpen}>
+            <PopoverTrigger asChild>
+              <button
+                type="button"
+                onClick={(e) => e.stopPropagation()}
+                className="type-meta self-start rounded px-1.5 py-0.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                data-testid={`month-cell-overflow-${dateStr}`}
               >
-                <span className="mt-0.5 shrink-0" aria-hidden>
-                  {task.completed ? (
-                    <CheckCircle2
-                      className="h-3.5 w-3.5 text-secondary sm:h-4 sm:w-4"
-                      strokeWidth={2}
+                +{overflow.length} more
+              </button>
+            </PopoverTrigger>
+            <PopoverContent
+              align="start"
+              className="w-64 p-2"
+              onClick={(e) => e.stopPropagation()}
+              onPointerDown={(e) => e.stopPropagation()}
+            >
+              <div className="type-label mb-1.5 text-muted-foreground">
+                {format(date, "EEE, MMM d")}
+              </div>
+              <ul className="flex flex-col gap-1">
+                {visibleEvents.map((event) => (
+                  <li key={event.id}>
+                    <EventPill
+                      event={event}
+                      timeLabel={pillTimeLabel(event, dateStr)}
+                      onClick={() => {
+                        setOverflowOpen(false);
+                        onRequestEdit(event.id);
+                      }}
                     />
-                  ) : (
-                    <Circle
-                      className="h-3.5 w-3.5 text-primary opacity-40 sm:h-4 sm:w-4"
-                      strokeWidth={2}
-                    />
-                  )}
-                </span>
-                <span
-                  className={cn(
-                    "type-caption min-w-0 flex-1 leading-snug sm:type-ui",
-                    task.completed
-                      ? "text-foreground-subtle line-through"
-                      : "text-foreground",
-                  )}
-                >
-                  {task.text.trim() || "Untitled task"}
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
+                  </li>
+                ))}
+              </ul>
+            </PopoverContent>
+          </Popover>
+        ) : null}
       </div>
     </article>
   );

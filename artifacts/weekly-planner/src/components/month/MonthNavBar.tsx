@@ -1,14 +1,25 @@
 import { format } from "date-fns";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Flag } from "lucide-react";
 import { addMonthsAnchor, isCurrentMonth } from "@/lib/month";
+import { CategoryFilter } from "@/components/month/CategoryFilter";
+import { useMonthView } from "@/components/month/MonthViewProvider";
+import { cn } from "@/lib/utils";
+
 interface MonthNavBarProps {
   anchorDateStr: string;
   onAnchorChange: (dateStr: string) => void;
+  /** Bumped on data changes; forwarded to CategoryFilter so its list refreshes. */
+  dataVersion: number;
 }
 
-export function MonthNavBar({ anchorDateStr, onAnchorChange }: MonthNavBarProps) {
+export function MonthNavBar({
+  anchorDateStr,
+  onAnchorChange,
+  dataVersion,
+}: MonthNavBarProps) {
   const todayStr = format(new Date(), "yyyy-MM-dd");
   const showToday = !isCurrentMonth(anchorDateStr);
+  const { importantOnly, toggleImportantOnly } = useMonthView();
 
   return (
     <div
@@ -25,8 +36,6 @@ export function MonthNavBar({ anchorDateStr, onAnchorChange }: MonthNavBarProps)
       >
         <ChevronLeft className="h-3.5 w-3.5" strokeWidth={2} />
       </button>
-
-      <div className="min-w-0 flex-1" aria-hidden />
 
       <button
         type="button"
@@ -50,6 +59,35 @@ export function MonthNavBar({ anchorDateStr, onAnchorChange }: MonthNavBarProps)
           Today
         </button>
       ) : null}
+
+      <div className="min-w-0 flex-1" aria-hidden />
+
+      <button
+        type="button"
+        onClick={toggleImportantOnly}
+        aria-pressed={importantOnly}
+        title={
+          importantOnly
+            ? "Showing only important events"
+            : "Show only important events"
+        }
+        data-testid="button-important-toggle"
+        className={cn(
+          "type-label flex h-8 items-center gap-1.5 rounded-lg border border-border px-2.5 transition-colors hover:bg-accent",
+          importantOnly
+            ? "bg-surface-accent text-foreground"
+            : "text-muted-foreground",
+        )}
+      >
+        <Flag
+          className="h-3.5 w-3.5"
+          strokeWidth={2}
+          fill={importantOnly ? "currentColor" : "none"}
+        />
+        <span>Important</span>
+      </button>
+
+      <CategoryFilter dataVersion={dataVersion} />
     </div>
   );
 }

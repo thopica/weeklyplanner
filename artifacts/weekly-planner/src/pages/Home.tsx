@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { format, parseISO } from "date-fns";
 import { useLocation } from "wouter";
 import {
@@ -13,7 +13,14 @@ import {
   getHabits,
   savePlannerData,
 } from "@/lib/storage";
-import { DayData, HabitDefinition, PlannerData } from "@/lib/types";
+import {
+  projectEventsToDayBlocks,
+  syncBlocksToEventsForDay,
+} from "@/lib/event-projection";
+import { getEvents } from "@/lib/events";
+import { DayData, HabitDefinition, PlannerData, TimeBlock } from "@/lib/types";
+import { EventDialog, type EventDialogConfig } from "@/components/EventDialog";
+import { AllDayBanner } from "@/components/AllDayBanner";
 import { mergeDayTasks, partitionDayTasks } from "@/lib/tasks";
 import { moveTaskBetweenDays } from "@/lib/task-move";
 import { toast } from "@/hooks/use-toast";
@@ -47,12 +54,21 @@ export default function Home() {
   const { schedulePaneWidth, resizeHandleProps } = useSchedulePaneResize();
   const saveStatusTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [saveStatus, setSaveStatus] = useState<"idle" | "saved">("idle");
+  const [eventsVersion, setEventsVersion] = useState(0);
+  const [eventDialogConfig, setEventDialogConfig] =
+    useState<EventDialogConfig | null>(null);
+
+  const scheduleBlocks = useMemo<TimeBlock[]>(
+    () => projectEventsToDayBlocks(selectedDateStr),
+    [selectedDateStr, eventsVersion],
+  );
 
   const loadData = (dateStr: string = selectedDateStr) => {
     setDayData(getDayData(dateStr));
     setPlannerData(getPlannerData());
     setScheduleRange(getScheduleRange());
     setHabits(getHabits());
+    setEventsVersion((v) => v + 1);
   };
 
   useEffect(() => {
@@ -119,6 +135,64 @@ export default function Home() {
       return;
     }
     setPlannerData(getPlannerData());
+    setSaveStatus("saved");
+    if (saveStatusTimerRef.current) clearTimeout(saveStatusTimerRef.current);
+    saveStatusTimerRef.current = setTimeout(() => setSaveStatus("idle"), 2000);
+  };
+
+  const handleBlocksChange = (blocks: TimeBlock[]) => {
+    try {
+      syncBlocksToEventsForDay(selectedDateStr, blocks);
+    } catch (e) {
+      console.error("Failed to sync schedule blocks to events", e);
+      toast({
+        title: "Could not save",
+        description: "Schedule changes did not persist.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setEventsVersion((v) => v + 1);
+    setSaveStatus("saved");
+    if (saveStatusTimerRef.current) clearTimeout(saveStatusTimerRef.current);
+    saveStatusTimerRef.current = setTimeout(() => setSaveStatus("idle"), 2000);
+  };
+
+  const openCreateAt = (slotStart: number) => {
+    setEventDialogConfig({
+      mode: "create",
+      defaultDateStr: selectedDateStr,
+      defaultStartMinute: slotStart,
+      defaultDurationMinutes: 60,
+      source: "day-schedule",
+    });
+  };
+
+  const openCreateAllDay = (dateStr: string) => {
+    setEventDialogConfig({
+      mode: "create",
+      defaultDateStr: dateStr,
+      defaultAllDay: true,
+      source: "day-allday",
+    });
+  };
+
+  const openEditForBlock = (blockId: string) => {
+    const event = getEvents().find((e) => e.id === blockId);
+    if (!event) {
+      toast({
+        title: "Could not open",
+        description: "That event no longer exists.",
+        variant: "destructive",
+      });
+      setEventsVersion((v) => v + 1);
+      return;
+    }
+    setEventDialogConfig({ mode: "edit", event });
+  };
+
+  const handleEventSaved = () => {
+    setEventsVersion((v) => v + 1);
     setSaveStatus("saved");
     if (saveStatusTimerRef.current) clearTimeout(saveStatusTimerRef.current);
     saveStatusTimerRef.current = setTimeout(() => setSaveStatus("idle"), 2000);
@@ -330,11 +404,19 @@ export default function Home() {
                       "lg:order-none lg:h-full lg:min-h-0 lg:max-w-[70vw] lg:shrink-0 lg:overflow-hidden lg:border-l lg:border-t-0 lg:py-3",
                     )}
                   >
+                  <AllDayBanner
+                    dateStr={selectedDateStr}
+                    eventsVersion={eventsVersion}
+                    onRequestCreate={openCreateAllDay}
+                    onRequestEdit={openEditForBlock}
+                  />
                   <div className="min-h-0 flex-1 overflow-hidden lg:px-1">
                     <TimeBlockSchedule
                       range={scheduleRange}
-                      blocks={dayData.timeBlocks}
-                      onChange={(blocks) => handleDataChange({ ...dayData, timeBlocks: blocks })}
+                      blocks={scheduleBlocks}
+                      onChange={handleBlocksChange}
+                      onRequestCreate={openCreateAt}
+                      onRequestEdit={openEditForBlock}
                     />
                   </div>
                   </motion.section>
@@ -345,6 +427,11 @@ export default function Home() {
         </AnimatePresence>
 
       </main>
+      <EventDialog
+        config={eventDialogConfig}
+        onClose={() => setEventDialogConfig(null)}
+        onSaved={handleEventSaved}
+      />
     </motion.div>
   );
 }

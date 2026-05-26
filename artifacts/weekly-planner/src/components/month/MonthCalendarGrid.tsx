@@ -1,5 +1,8 @@
+import { useMemo } from "react";
 import { format } from "date-fns";
 import { getDayData } from "@/lib/storage";
+import { dayEndExclusive, getEvents } from "@/lib/events";
+import type { CalendarEvent, DayData } from "@/lib/types";
 import {
   formatMonthTitle,
   getMonthGrid,
@@ -10,13 +13,54 @@ import { MonthDayCell } from "@/components/month/MonthDayCell";
 
 interface MonthCalendarGridProps {
   anchorDateStr: string;
-  onOpenDay: (dateStr: string) => void;
+  /** Bumped by the page on data changes so derived state re-runs. */
+  dataVersion: number;
+  onRequestCreate: (dateStr: string) => void;
+  onRequestEdit: (eventId: string) => void;
 }
 
-export function MonthCalendarGrid({ anchorDateStr, onOpenDay }: MonthCalendarGridProps) {
+function eventTouchesDay(event: CalendarEvent, dateStr: string): boolean {
+  const dayStart = `${dateStr}T00:00:00`;
+  const dayEnd = dayEndExclusive(dateStr);
+  return event.startsAt < dayEnd && event.endsAt > dayStart;
+}
+
+export function MonthCalendarGrid({
+  anchorDateStr,
+  dataVersion,
+  onRequestCreate,
+  onRequestEdit,
+}: MonthCalendarGridProps) {
   const todayStr = format(new Date(), "yyyy-MM-dd");
-  const rows = getMonthGridRows(getMonthGrid(anchorDateStr));
-  const monthLabel = formatMonthTitle(anchorDateStr);
+  const cells = useMemo(() => getMonthGrid(anchorDateStr), [anchorDateStr]);
+  const rows = useMemo(() => getMonthGridRows(cells), [cells]);
+  const monthLabel = useMemo(
+    () => formatMonthTitle(anchorDateStr),
+    [anchorDateStr],
+  );
+
+  const eventsByDay = useMemo(() => {
+    // Single read of the events store, then 42 cell-scoped overlap filters.
+    void dataVersion;
+    const events = getEvents();
+    const map = new Map<string, CalendarEvent[]>();
+    for (const cell of cells) {
+      map.set(
+        cell.dateStr,
+        events.filter((e) => eventTouchesDay(e, cell.dateStr)),
+      );
+    }
+    return map;
+  }, [cells, dataVersion]);
+
+  const dayDataByDate = useMemo(() => {
+    void dataVersion;
+    const map = new Map<string, DayData>();
+    for (const cell of cells) {
+      map.set(cell.dateStr, getDayData(cell.dateStr));
+    }
+    return map;
+  }, [cells, dataVersion]);
 
   return (
     <section
@@ -53,10 +97,12 @@ export function MonthCalendarGrid({ anchorDateStr, onOpenDay }: MonthCalendarGri
               <MonthDayCell
                 key={cell.dateStr}
                 dateStr={cell.dateStr}
-                dayData={getDayData(cell.dateStr)}
+                dayData={dayDataByDate.get(cell.dateStr)!}
+                events={eventsByDay.get(cell.dateStr) ?? []}
                 inMonth={cell.inMonth}
                 isToday={cell.dateStr === todayStr}
-                onOpenDay={onOpenDay}
+                onRequestCreate={onRequestCreate}
+                onRequestEdit={onRequestEdit}
               />
             ))}
           </div>
@@ -65,4 +111,3 @@ export function MonthCalendarGrid({ anchorDateStr, onOpenDay }: MonthCalendarGri
     </section>
   );
 }
-

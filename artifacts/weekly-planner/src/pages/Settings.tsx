@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { SettingsLayout } from "@/components/SettingsLayout";
 import { ColorModeSettings } from "@/components/ColorModeSettings";
 import { ThemeSettings } from "@/components/ThemeSettings";
 import { CalendarHoursSettings } from "@/components/CalendarHoursSettings";
 import { HabitsSettings } from "@/components/HabitsSettings";
+import { CategoriesSettings } from "@/components/CategoriesSettings";
 import { DataManagementSettings } from "@/components/DataManagementSettings";
 import type { ColorMode } from "@/lib/appearance";
 import {
@@ -35,6 +36,22 @@ export default function SettingsPage() {
     setRefreshKey((k) => k + 1);
   };
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (window.location.hash !== "#categories") return;
+    let attempts = 0;
+    const tick = () => {
+      const target = document.getElementById("categories");
+      if (target) {
+        target.scrollIntoView({ behavior: "smooth", block: "start" });
+        return;
+      }
+      attempts += 1;
+      if (attempts < 10) window.setTimeout(tick, 50);
+    };
+    tick();
+  }, []);
+
   return (
     <SettingsLayout>
       <ColorModeSettings colorMode={colorMode} onColorModeChange={handleColorModeChange} />
@@ -42,6 +59,12 @@ export default function SettingsPage() {
       <CalendarHoursSettings key={`cal-${refreshKey}`} onSaved={handleDataReset} />
       <div className="planner-card-surface rounded-xl border border-border p-5">
         <HabitsSettings onHabitsChange={handleDataReset} />
+      </div>
+      <div className="planner-card-surface rounded-xl border border-border p-5">
+        <CategoriesSettings
+          key={`cat-${refreshKey}`}
+          onCategoriesChange={handleDataReset}
+        />
       </div>
       <DataManagementSettings
         key={`data-${refreshKey}`}

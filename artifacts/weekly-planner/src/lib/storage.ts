@@ -12,7 +12,20 @@ import {
   HabitDefinition,
   Task,
   MAX_HABITS,
+  CalendarEvent,
+  CategoryDefinition,
 } from './types';
+import {
+  getEvents,
+  saveEvents,
+  normalizeEventList,
+  migrateTimeBlocksToEventsIfNeeded,
+} from './events';
+import {
+  getCategories,
+  reconcileDeletedDefaultsFromList,
+  saveCategories,
+} from './categories';
 import {
   type DayScheduleRange,
   clampBlockDuration,
@@ -53,6 +66,10 @@ export interface PlannerBackupV1 {
   exportedAt: string;
   planner: PlannerData;
   preferences: PlannerBackupPreferences;
+  /** Additive in this release; absent in legacy v1 exports. */
+  events?: CalendarEvent[];
+  /** Additive in this release; absent in legacy v1 exports. */
+  categories?: CategoryDefinition[];
 }
 
 const DATE_KEY_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -425,6 +442,8 @@ export function buildPlannerBackup(): PlannerBackupV1 {
       schedulePaneWidth: getSchedulePaneWidth(),
       pomodoro: getPomodoroSettings(),
     },
+    events: getEvents(),
+    categories: getCategories(),
   };
 }
 
@@ -472,6 +491,14 @@ export function importPlannerBackup(raw: unknown): ImportBackupResult {
 
     const plannerResult = savePlannerData(planner);
     if (!plannerResult.ok) return plannerResult;
+
+    if (Array.isArray(raw.events)) {
+      saveEvents(normalizeEventList(raw.events));
+    }
+    if (Array.isArray(raw.categories)) {
+      saveCategories(raw.categories);
+      reconcileDeletedDefaultsFromList(raw.categories);
+    }
 
     return applyBackupPreferences(prefs);
   }
@@ -605,6 +632,19 @@ export function saveColorMode(mode: ColorMode): StorageWriteResult {
 
 export function initAppearance(): void {
   applyAppearance(getTheme(), getColorMode());
+}
+
+/**
+ * Seed default categories (if none yet) and run the one-time TimeBlock → Event
+ * migration. Safe to call on every boot — both steps are idempotent.
+ */
+export function initEventsAndCategories(): void {
+  try {
+    getCategories();
+    migrateTimeBlocksToEventsIfNeeded(getPlannerData());
+  } catch (e) {
+    console.error("Failed to initialize events/categories", e);
+  }
 }
 
 export function isDarkAppearance(): boolean {
@@ -827,6 +867,11 @@ export function loadDemoData(anchorDateStr: string): StorageWriteResult {
 
   const plannerResult = savePlannerData(data);
   if (!plannerResult.ok) return plannerResult;
+
+  localStorage.removeItem("weeklyPlanner_events");
+  localStorage.removeItem("weeklyPlanner_eventsMigrated");
+  migrateTimeBlocksToEventsIfNeeded(data);
+
   return saveSelectedDate(end);
 }
 
@@ -834,6 +879,8 @@ export function loadDemoData(anchorDateStr: string): StorageWriteResult {
 export function clearPlannerData(): void {
   localStorage.removeItem(STORAGE_KEYS.PLANNER_DATA);
   localStorage.removeItem(STORAGE_KEYS.SCHEDULE_RANGE);
+  localStorage.removeItem("weeklyPlanner_events");
+  localStorage.removeItem("weeklyPlanner_eventsMigrated");
 }
 
 /** @deprecated Use {@link clearPlannerData} */

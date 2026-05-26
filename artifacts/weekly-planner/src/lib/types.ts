@@ -68,3 +68,44 @@ export const defaultDayData: DayData = {
 
 export const MAX_HABITS = 12;
 export const MAX_HABIT_NAME_LENGTH = 80;
+
+export type ColorKey =
+  | 'pink'
+  | 'green'
+  | 'blue'
+  | 'amber'
+  | 'purple'
+  | 'teal'
+  | 'coral'
+  | 'gray'
+  | 'red';
+
+/** Stable id for the seeded fallback category; never deleted. */
+export const FALLBACK_CATEGORY_ID = 'personal';
+
+export interface CategoryDefinition {
+  id: string;
+  label: string;
+  colorKey: ColorKey;
+  isDefault: boolean;
+  order: number;
+}
+
+/**
+ * Calendar event stored in floating local time (no timezone suffix).
+ * Format: "YYYY-MM-DDTHH:mm:ss" for timed events.
+ * All-day events use "${date}T00:00:00" → next-day "${date+1}T00:00:00" (exclusive).
+ * Floating time avoids DST drift: an event at 10am stays at 10am after DST transitions.
+ */
+export interface CalendarEvent {
+  id: string;
+  title: string;
+  startsAt: string;
+  endsAt: string;
+  allDay: boolean;
+  categoryId: string;
+  important: boolean;
+}
+
+export const MAX_CATEGORY_LABEL_LENGTH = 40;
+export const MAX_EVENT_TITLE_LENGTH = 200;

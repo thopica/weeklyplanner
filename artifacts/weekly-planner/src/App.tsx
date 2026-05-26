@@ -13,7 +13,12 @@ import TermsPage from "@/pages/terms";
 import GuidePage from "@/pages/guide";
 import { useEffect } from "react";
 import { PomodoroProvider } from "@/components/pomodoro/PomodoroProvider";
-import { getColorMode, getTheme, initAppearance } from "@/lib/storage";
+import {
+  getColorMode,
+  getTheme,
+  initAppearance,
+  initEventsAndCategories,
+} from "@/lib/storage";
 import { watchSystemColorMode } from "@/lib/appearance";
 
 function Router() {
@@ -37,6 +42,7 @@ const isStandalone = import.meta.env.VITE_STANDALONE === "true";
 function App() {
   useEffect(() => {
     initAppearance();
+    initEventsAndCategories();
     return watchSystemColorMode(getTheme, getColorMode);
   }, []);
 

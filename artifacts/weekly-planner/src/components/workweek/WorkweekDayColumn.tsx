@@ -1,8 +1,9 @@
-import type { ReactNode } from "react";
+import { useMemo, type ReactNode } from "react";
 import { format, parseISO } from "date-fns";
 import { CheckCircle2, Circle } from "lucide-react";
 import type { DayData } from "@/lib/types";
 import { getDayTaskSummary, isMeaningfulTask, mergeDayTasks } from "@/lib/tasks";
+import { projectEventsToDayBlocks } from "@/lib/event-projection";
 import { IncompleteDayIndicator } from "@/components/IncompleteDayIndicator";
 import type { DayScheduleRange } from "@/lib/schedule";
 import { WorkweekScheduleColumn } from "@/components/schedule/WorkweekScheduleColumn";
@@ -50,6 +51,10 @@ export function WorkweekDayColumn({
   const allTasks = mergeDayTasks(dayData).filter(isMeaningfulTask);
   const focus = dayData.mainFocus.trim();
   const focusDone = dayData.mainFocusCompleted ?? false;
+  const scheduleBlocks = useMemo(
+    () => projectEventsToDayBlocks(dateStr),
+    [dateStr],
+  );
 
   return (
     <article
@@ -171,7 +176,7 @@ export function WorkweekDayColumn({
       </div>
 
       <div className={cn("shrink-0", WEEK_SCHEDULE_SURFACE_CLASS)}>
-        <WorkweekScheduleColumn blocks={dayData.timeBlocks} range={range} />
+        <WorkweekScheduleColumn blocks={scheduleBlocks} range={range} />
       </div>
     </article>
   );

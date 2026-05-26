@@ -1,47 +1,28 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { TimeBlock } from "@/lib/types";
-import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
 import {
   type DayScheduleRange,
   SLOT_MINUTES,
   PX_PER_SLOT,
   blockHeightPx,
-  clampBlockDuration,
-  clampBlockStart,
-  formatBlockRange,
-  formatScheduleTime,
   hasTimeConflict,
   maxExclusiveEndForStart,
   minuteToTopPx,
   snapToGrid,
-  timelineTicks,
-  validExclusiveEndsFromStart,
 } from "@/lib/schedule";
 import { ScheduleTimeRail } from "@/components/schedule/ScheduleTimeRail";
 import { ScheduleSlotGrid } from "@/components/schedule/ScheduleSlotGrid";
 
 interface TimeBlockScheduleProps {
   blocks: TimeBlock[];
+  /** Drag/resize emits the entire next blocks list. */
   onChange: (blocks: TimeBlock[]) => void;
   range: DayScheduleRange;
+  /** Double-click on an empty slot → parent opens EventDialog in create mode. */
+  onRequestCreate: (slotStart: number) => void;
+  /** Click on an existing block → parent opens EventDialog in edit mode. */
+  onRequestEdit: (blockId: string) => void;
 }
 
 type ResizeState = {
@@ -108,37 +89,20 @@ function BlockOverlay({
   );
 }
 
-export function TimeBlockSchedule({ blocks, onChange, range }: TimeBlockScheduleProps) {
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editingDraft, setEditingDraft] = useState<TimeBlock | null>(null);
-  const openSnapshotRef = useRef<TimeBlock | null>(null);
+export function TimeBlockSchedule({
+  blocks,
+  onChange,
+  range,
+  onRequestCreate,
+  onRequestEdit,
+}: TimeBlockScheduleProps) {
   const [resize, setResize] = useState<ResizeState | null>(null);
   const blocksRef = useRef(blocks);
   blocksRef.current = blocks;
   const rangeRef = useRef(range);
   rangeRef.current = range;
 
-  useEffect(() => {
-    if (!editingId) {
-      setEditingDraft(null);
-      openSnapshotRef.current = null;
-      return;
-    }
-    const block = blocksRef.current.find((x) => x.id === editingId);
-    if (block) {
-      const copy = { ...block };
-      openSnapshotRef.current = copy;
-      setEditingDraft(copy);
-    }
-  }, [editingId]);
-
-  const displayBlocks =
-    editingDraft && editingId
-      ? blocks.map((b) => (b.id === editingId ? editingDraft : b))
-      : blocks;
-
-  const sorted = [...displayBlocks].sort((a, b) => a.startMinute - b.startMinute);
-  const ticks = timelineTicks(range);
+  const sorted = [...blocks].sort((a, b) => a.startMinute - b.startMinute);
 
   const applyBlocks = useCallback(
     (next: TimeBlock[]) => {
@@ -157,17 +121,7 @@ export function TimeBlockSchedule({ blocks, onChange, range }: TimeBlockSchedule
       });
       return;
     }
-    const id = crypto.randomUUID();
-    applyBlocks([
-      ...b,
-      {
-        id,
-        startMinute: slotStart,
-        durationMinutes: SLOT_MINUTES,
-        label: "",
-      },
-    ]);
-    setEditingId(id);
+    onRequestCreate(slotStart);
   };
 
   const handleResizeStart = (
@@ -251,73 +205,6 @@ export function TimeBlockSchedule({ blocks, onChange, range }: TimeBlockSchedule
     };
   }, [resize, applyBlocks]);
 
-  const editing = editingDraft;
-
-  const patchDraft = (patch: Partial<TimeBlock>) => {
-    setEditingDraft((d) => (d ? { ...d, ...patch } : null));
-  };
-
-  const closeDialog = () => {
-    setEditingId(null);
-  };
-
-  const cancelEditing = () => {
-    if (!editingId) return;
-    const snap = openSnapshotRef.current;
-    if (!snap) {
-      closeDialog();
-      return;
-    }
-    const wasNew = !snap.label.trim();
-    if (wasNew) {
-      applyBlocks(blocks.filter((x) => x.id !== editingId));
-    } else {
-      applyBlocks(blocks.map((x) => (x.id === editingId ? snap : x)));
-    }
-    closeDialog();
-  };
-
-  const saveEditing = () => {
-    if (!editingDraft) return;
-    if (
-      hasTimeConflict(
-        editingDraft.startMinute,
-        editingDraft.durationMinutes,
-        blocks,
-        editingDraft.id,
-      )
-    ) {
-      toast({
-        title: "Conflict",
-        description: "This block overlaps another event.",
-        variant: "destructive",
-      });
-      return;
-    }
-    applyBlocks(
-      blocks.map((x) => (x.id === editingDraft.id ? editingDraft : x)),
-    );
-    closeDialog();
-  };
-
-  const removeEditing = () => {
-    if (!editingId) return;
-    applyBlocks(blocks.filter((x) => x.id !== editingId));
-    closeDialog();
-  };
-
-  const endOptions =
-    editing &&
-    validExclusiveEndsFromStart(
-      editing.startMinute,
-      displayBlocks,
-      range,
-      editing.id,
-    );
-  const endExclusive = editing
-    ? editing.startMinute + editing.durationMinutes
-    : 0;
-
   return (
     <div
       className="flex h-full min-h-0 flex-col"
@@ -339,7 +226,7 @@ export function TimeBlockSchedule({ blocks, onChange, range }: TimeBlockSchedule
                 key={block.id}
                 block={block}
                 range={range}
-                onOpenEdit={setEditingId}
+                onOpenEdit={onRequestEdit}
                 onResizeStart={handleResizeStart}
                 isResizing={!!resize}
               />
@@ -347,152 +234,6 @@ export function TimeBlockSchedule({ blocks, onChange, range }: TimeBlockSchedule
           </ScheduleSlotGrid>
         </div>
       </div>
-
-      <Dialog
-        open={!!editing}
-        onOpenChange={(open) => {
-          if (!open) cancelEditing();
-        }}
-      >
-        <DialogContent className="max-w-md gap-0 border-border p-6 shadow-tinted sm:rounded-xl">
-          {editing && (
-            <>
-              <DialogHeader className="space-y-1 text-left">
-                <DialogTitle className="type-section-title">
-                  Time block
-                </DialogTitle>
-                <DialogDescription className="type-ui">
-                  {formatBlockRange(editing)}
-                </DialogDescription>
-              </DialogHeader>
-
-              <div className="grid gap-4 py-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="block-name">Name</Label>
-                  <Input
-                    id="block-name"
-                    value={editing.label}
-                    onChange={(e) => patchDraft({ label: e.target.value })}
-                    placeholder="What is this time for?"
-                    autoFocus
-                  />
-                </div>
-
-                <div className="grid gap-2">
-                  <Label>Start</Label>
-                  <Select
-                    value={String(editing.startMinute)}
-                    onValueChange={(v) => {
-                      const sm = clampBlockStart(Number(v), range);
-                      const prevEnd = editing.startMinute + editing.durationMinutes;
-                      const ends = validExclusiveEndsFromStart(
-                        sm,
-                        displayBlocks,
-                        range,
-                        editing.id,
-                      );
-                      if (ends.length === 0) {
-                        toast({
-                          title: "Invalid start",
-                          description: "No free time from that start in your calendar hours.",
-                          variant: "destructive",
-                        });
-                        return;
-                      }
-                      let end = prevEnd;
-                      if (!ends.includes(end)) {
-                        end = ends.filter((e) => e <= prevEnd).at(-1) ?? ends[0];
-                      }
-                      const dur = end - sm;
-                      patchDraft({
-                        startMinute: sm,
-                        durationMinutes: clampBlockDuration(sm, dur, range),
-                      });
-                    }}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="max-h-64">
-                      {ticks.map((m) => (
-                        <SelectItem key={m} value={String(m)}>
-                          {formatScheduleTime(m)}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="grid gap-2">
-                  <Label>End</Label>
-                  <Select
-                    value={String(endExclusive)}
-                    onValueChange={(v) => {
-                      const end = Number(v);
-                      const dur = end - editing.startMinute;
-                      if (
-                        hasTimeConflict(
-                          editing.startMinute,
-                          dur,
-                          displayBlocks,
-                          editing.id,
-                        )
-                      ) {
-                        toast({
-                          title: "Conflict",
-                          description: "That end time overlaps another block.",
-                          variant: "destructive",
-                        });
-                        return;
-                      }
-                      patchDraft({
-                        durationMinutes: clampBlockDuration(
-                          editing.startMinute,
-                          dur,
-                          range,
-                        ),
-                      });
-                    }}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="max-h-64">
-                      {(endOptions ?? []).map((end) => (
-                        <SelectItem key={end} value={String(end)}>
-                          {formatScheduleTime(end)}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <DialogFooter className="flex-col-reverse gap-2 sm:flex-row sm:justify-between">
-                <Button
-                  type="button"
-                  variant="destructive"
-                  onClick={removeEditing}
-                >
-                  Delete
-                </Button>
-                <div className="flex flex-col-reverse gap-2 sm:flex-row">
-                  <Button type="button" variant="outline" onClick={cancelEditing}>
-                    Cancel
-                  </Button>
-                  <Button
-                    type="button"
-                    onClick={saveEditing}
-                    data-testid="button-save-time-block"
-                  >
-                    Save
-                  </Button>
-                </div>
-              </DialogFooter>
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
