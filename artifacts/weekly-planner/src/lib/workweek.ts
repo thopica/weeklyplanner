@@ -13,6 +13,9 @@ export const WORKWEEK_SUMMARY_HEIGHT = "9.5rem";
 /** Compact summary height below xl (~13" laptops). */
 export const WORKWEEK_SUMMARY_HEIGHT_COMPACT = "8rem";
 
+/** All-day strip height — same in compact and full because pills don't shrink legibly. */
+export const WORKWEEK_ALLDAY_HEIGHT = "2.25rem";
+
 /** Week view: focus/tasks band — matches page canvas above the schedule grid. */
 export const WEEK_SUMMARY_SURFACE_CLASS = "bg-canvas dark:bg-card";
 export const WEEK_SCHEDULE_SURFACE_CLASS = "bg-surface-subtle";

@@ -1,7 +1,13 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { format } from "date-fns";
 import { getDayData } from "@/lib/storage";
+import { getEvents } from "@/lib/events";
+import type { CalendarEvent } from "@/lib/types";
 import type { DayScheduleRange } from "@/lib/schedule";
+import {
+  buildAllDayLanesForWeek,
+  type MultiDaySegment,
+} from "@/lib/month-lanes";
 import {
   formatWorkweekRange,
   getWorkweekDays,
@@ -19,18 +25,73 @@ import { cn } from "@/lib/utils";
 interface WorkweekBoardProps {
   anchorDateStr: string;
   range: DayScheduleRange;
+  eventsVersion: number;
   onOpenDay: (dateStr: string) => void;
+  onRequestCreateTimed: (dateStr: string, slotStart: number) => void;
+  onRequestEdit: (eventId: string) => void;
+  /** Called after a successful drag/resize so the page can bump eventsVersion. */
+  onEventsChanged: () => void;
 }
 
 const RAIL_TOP_SPACER_COMPACT = `calc(${WORKWEEK_DAY_HEADER_HEIGHT} + ${WORKWEEK_SUMMARY_HEIGHT_COMPACT})`;
 const RAIL_TOP_SPACER_FULL = `calc(${WORKWEEK_DAY_HEADER_HEIGHT} + ${WORKWEEK_SUMMARY_HEIGHT})`;
 
-export function WorkweekBoard({ anchorDateStr, range, onOpenDay }: WorkweekBoardProps) {
+/** Each band row (incl. gap) + a small vertical breathing room. */
+const ALLDAY_ROW_REM = 1.5;
+const ALLDAY_MIN_REM = 2.25;
+
+function computeAllDayStripHeight(maxLanes: number): string {
+  const rem = Math.max(ALLDAY_MIN_REM, maxLanes * ALLDAY_ROW_REM);
+  return `${rem}rem`;
+}
+
+export function WorkweekBoard({
+  anchorDateStr,
+  range,
+  eventsVersion,
+  onOpenDay,
+  onRequestCreateTimed,
+  onRequestEdit,
+  onEventsChanged,
+}: WorkweekBoardProps) {
   const days: WorkweekDay[] = getWorkweekDays(anchorDateStr);
   const todayStr = format(new Date(), "yyyy-MM-dd");
   const rangeLabel = formatWorkweekRange(days);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [scrollEdges, setScrollEdges] = useState({ left: false, right: false });
+
+  const allEvents = useMemo(() => {
+    void eventsVersion;
+    return getEvents();
+  }, [eventsVersion]);
+
+  const eventsById = useMemo(() => {
+    const map = new Map<string, CalendarEvent>();
+    for (const e of allEvents) map.set(e.id, e);
+    return map;
+  }, [allEvents]);
+
+  const weekDates = useMemo(() => days.map((d) => d.dateStr), [days]);
+
+  const allDayLanes = useMemo(
+    () => buildAllDayLanesForWeek(allEvents, weekDates),
+    [allEvents, weekDates],
+  );
+
+  const allDayStripHeight = computeAllDayStripHeight(allDayLanes.maxLanes);
+
+  const allDayBandsByDate = useMemo(() => {
+    const map = new Map<string, (MultiDaySegment | null)[]>();
+    for (const dateStr of weekDates) {
+      const cellSegs = allDayLanes.cells.get(dateStr) ?? [];
+      const bands: (MultiDaySegment | null)[] = new Array(
+        allDayLanes.maxLanes,
+      ).fill(null);
+      for (const seg of cellSegs) bands[seg.lane] = seg;
+      map.set(dateStr, bands);
+    }
+    return map;
+  }, [weekDates, allDayLanes]);
 
   const updateScrollEdges = useCallback(() => {
     const el = scrollRef.current;
@@ -84,6 +145,13 @@ export function WorkweekBoard({ anchorDateStr, range, onOpenDay }: WorkweekBoard
                 aria-hidden
               />
               <div
+                className="type-meta flex shrink-0 items-start justify-end border-b border-border pr-2 pt-1 font-semibold uppercase tracking-wider text-muted-foreground"
+                style={{ height: allDayStripHeight }}
+                aria-hidden
+              >
+                All day
+              </div>
+              <div
                 className={cn(
                   "shrink-0 overflow-hidden rounded-xl border border-border",
                   WEEK_SCHEDULE_SURFACE_CLASS,
@@ -105,7 +173,14 @@ export function WorkweekBoard({ anchorDateStr, range, onOpenDay }: WorkweekBoard
                 dayData={getDayData(dateStr)}
                 range={range}
                 isToday={dateStr === todayStr}
+                eventsVersion={eventsVersion}
+                allDayBands={allDayBandsByDate.get(dateStr) ?? []}
+                eventsById={eventsById}
+                allDayStripHeight={allDayStripHeight}
                 onOpenDay={onOpenDay}
+                onRequestCreateTimed={onRequestCreateTimed}
+                onRequestEdit={onRequestEdit}
+                onEventsChanged={onEventsChanged}
               />
             ))}
           </div>

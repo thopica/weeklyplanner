@@ -9,6 +9,10 @@ import {
   getMonthGridRows,
   MONTH_WEEKDAY_LABELS,
 } from "@/lib/month";
+import {
+  buildMultiDayLanesForRow,
+  type MultiDaySegment,
+} from "@/lib/month-lanes";
 import { MonthDayCell } from "@/components/month/MonthDayCell";
 
 interface MonthCalendarGridProps {
@@ -39,19 +43,26 @@ export function MonthCalendarGrid({
     [anchorDateStr],
   );
 
-  const eventsByDay = useMemo(() => {
-    // Single read of the events store, then 42 cell-scoped overlap filters.
+  const allEvents = useMemo(() => {
     void dataVersion;
-    const events = getEvents();
+    return getEvents();
+  }, [dataVersion]);
+
+  const eventsByDay = useMemo(() => {
     const map = new Map<string, CalendarEvent[]>();
     for (const cell of cells) {
       map.set(
         cell.dateStr,
-        events.filter((e) => eventTouchesDay(e, cell.dateStr)),
+        allEvents.filter((e) => eventTouchesDay(e, cell.dateStr)),
       );
     }
     return map;
-  }, [cells, dataVersion]);
+  }, [cells, allEvents]);
+
+  const lanesByRow = useMemo(
+    () => rows.map((row) => buildMultiDayLanesForRow(allEvents, row)),
+    [rows, allEvents],
+  );
 
   const dayDataByDate = useMemo(() => {
     void dataVersion;
@@ -86,27 +97,38 @@ export function MonthCalendarGrid({
       </div>
 
       <div className="flex flex-col gap-1 px-2 pt-2 sm:gap-1.5 sm:px-4">
-        {rows.map((week, weekIndex) => (
-          <div
-            key={`week-${weekIndex}`}
-            className="grid shrink-0 grid-cols-7 gap-1 sm:gap-1.5"
-            role="row"
-            data-testid={`month-week-row-${weekIndex}`}
-          >
-            {week.map((cell) => (
-              <MonthDayCell
-                key={cell.dateStr}
-                dateStr={cell.dateStr}
-                dayData={dayDataByDate.get(cell.dateStr)!}
-                events={eventsByDay.get(cell.dateStr) ?? []}
-                inMonth={cell.inMonth}
-                isToday={cell.dateStr === todayStr}
-                onRequestCreate={onRequestCreate}
-                onRequestEdit={onRequestEdit}
-              />
-            ))}
-          </div>
-        ))}
+        {rows.map((week, weekIndex) => {
+          const rowLanes = lanesByRow[weekIndex];
+          return (
+            <div
+              key={`week-${weekIndex}`}
+              className="grid shrink-0 grid-cols-7 gap-1 sm:gap-1.5"
+              role="row"
+              data-testid={`month-week-row-${weekIndex}`}
+            >
+              {week.map((cell) => {
+                const cellSegs = rowLanes.cells.get(cell.dateStr) ?? [];
+                const bands: (MultiDaySegment | null)[] = new Array(
+                  rowLanes.maxLanes,
+                ).fill(null);
+                for (const seg of cellSegs) bands[seg.lane] = seg;
+                return (
+                  <MonthDayCell
+                    key={cell.dateStr}
+                    dateStr={cell.dateStr}
+                    dayData={dayDataByDate.get(cell.dateStr)!}
+                    events={eventsByDay.get(cell.dateStr) ?? []}
+                    multiDayBands={bands}
+                    inMonth={cell.inMonth}
+                    isToday={cell.dateStr === todayStr}
+                    onRequestCreate={onRequestCreate}
+                    onRequestEdit={onRequestEdit}
+                  />
+                );
+              })}
+            </div>
+          );
+        })}
       </div>
     </section>
   );

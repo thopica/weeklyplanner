@@ -1,12 +1,18 @@
 import { useMemo, type ReactNode } from "react";
 import { format, parseISO } from "date-fns";
 import { CheckCircle2, Circle } from "lucide-react";
-import type { DayData } from "@/lib/types";
+import type { CalendarEvent, DayData, TimeBlock } from "@/lib/types";
 import { getDayTaskSummary, isMeaningfulTask, mergeDayTasks } from "@/lib/tasks";
-import { projectEventsToDayBlocks } from "@/lib/event-projection";
+import {
+  projectEventsToDayBlocks,
+  syncBlocksToEventsForDay,
+} from "@/lib/event-projection";
+import { toast } from "@/hooks/use-toast";
 import { IncompleteDayIndicator } from "@/components/IncompleteDayIndicator";
 import type { DayScheduleRange } from "@/lib/schedule";
+import type { MultiDaySegment } from "@/lib/month-lanes";
 import { WorkweekScheduleColumn } from "@/components/schedule/WorkweekScheduleColumn";
+import { WorkweekAllDayStrip } from "@/components/workweek/WorkweekAllDayStrip";
 import {
   WEEK_SCHEDULE_SURFACE_CLASS,
   WEEK_SUMMARY_SURFACE_CLASS,
@@ -19,7 +25,19 @@ interface WorkweekDayColumnProps {
   dayData: DayData;
   range: DayScheduleRange;
   isToday: boolean;
+  /** Bumped by parent on event changes so projected blocks + all-day re-read. */
+  eventsVersion: number;
+  /** Per-lane band data for this day (length = week's max lane count). */
+  allDayBands: (MultiDaySegment | null)[];
+  /** Event lookup shared across the whole week so bands resolve titles cheaply. */
+  eventsById: Map<string, CalendarEvent>;
+  /** All-day strip height (CSS unit) computed at the board level. */
+  allDayStripHeight: string;
   onOpenDay: (dateStr: string) => void;
+  onRequestCreateTimed: (dateStr: string, slotStart: number) => void;
+  onRequestEdit: (eventId: string) => void;
+  /** Bubbles up to the page so it can bump eventsVersion after a resize. */
+  onEventsChanged: () => void;
 }
 
 function SummaryBlock({
@@ -42,7 +60,14 @@ export function WorkweekDayColumn({
   dayData,
   range,
   isToday,
+  eventsVersion,
+  allDayBands,
+  eventsById,
+  allDayStripHeight,
   onOpenDay,
+  onRequestCreateTimed,
+  onRequestEdit,
+  onEventsChanged,
 }: WorkweekDayColumnProps) {
   const date = parseISO(`${dateStr}T12:00:00`);
   const todayStr = format(new Date(), "yyyy-MM-dd");
@@ -53,8 +78,24 @@ export function WorkweekDayColumn({
   const focusDone = dayData.mainFocusCompleted ?? false;
   const scheduleBlocks = useMemo(
     () => projectEventsToDayBlocks(dateStr),
-    [dateStr],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [dateStr, eventsVersion],
   );
+
+  const handleBlocksChange = (nextBlocks: TimeBlock[]) => {
+    try {
+      syncBlocksToEventsForDay(dateStr, nextBlocks);
+    } catch (e) {
+      console.error("Failed to sync schedule blocks to events", e);
+      toast({
+        title: "Could not save",
+        description: "Schedule changes did not persist.",
+        variant: "destructive",
+      });
+      return;
+    }
+    onEventsChanged();
+  };
 
   return (
     <article
@@ -175,8 +216,22 @@ export function WorkweekDayColumn({
         </div>
       </div>
 
+      <WorkweekAllDayStrip
+        dateStr={dateStr}
+        bands={allDayBands}
+        eventsById={eventsById}
+        height={allDayStripHeight}
+        onRequestEdit={onRequestEdit}
+      />
+
       <div className={cn("shrink-0", WEEK_SCHEDULE_SURFACE_CLASS)}>
-        <WorkweekScheduleColumn blocks={scheduleBlocks} range={range} />
+        <WorkweekScheduleColumn
+          blocks={scheduleBlocks}
+          range={range}
+          onRequestCreate={(slot) => onRequestCreateTimed(dateStr, slot)}
+          onRequestEdit={onRequestEdit}
+          onBlocksChange={handleBlocksChange}
+        />
       </div>
     </article>
   );

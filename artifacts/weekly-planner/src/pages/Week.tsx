@@ -7,18 +7,51 @@ import {
   saveSelectedDate,
   getScheduleRange,
 } from "@/lib/storage";
+import { getEvents } from "@/lib/events";
+import { toast } from "@/hooks/use-toast";
 import { PlannerHeader } from "@/components/PlannerHeader";
 import { WorkweekBoard } from "@/components/workweek/WorkweekBoard";
 import { WeekNavBar } from "@/components/workweek/WeekNavBar";
+import { EventDialog, type EventDialogConfig } from "@/components/EventDialog";
 
 export default function WeekPage() {
   const [location, navigate] = useLocation();
   const [selectedDateStr, setSelectedDateStr] = useState(() => getSelectedDate());
   const [scheduleRange, setScheduleRange] = useState(() => getScheduleRange());
   const [dataVersion, setDataVersion] = useState(0);
+  const [eventDialogConfig, setEventDialogConfig] =
+    useState<EventDialogConfig | null>(null);
 
   const loadData = () => {
     setScheduleRange(getScheduleRange());
+    setDataVersion((v) => v + 1);
+  };
+
+  const handleRequestCreateTimed = (dateStr: string, slotStart: number) => {
+    setEventDialogConfig({
+      mode: "create",
+      defaultDateStr: dateStr,
+      defaultStartMinute: slotStart,
+      defaultDurationMinutes: 60,
+      source: "day-schedule",
+    });
+  };
+
+  const handleRequestEdit = (eventId: string) => {
+    const event = getEvents().find((e) => e.id === eventId);
+    if (!event) {
+      toast({
+        title: "Could not open",
+        description: "That event no longer exists.",
+        variant: "destructive",
+      });
+      loadData();
+      return;
+    }
+    setEventDialogConfig({ mode: "edit", event });
+  };
+
+  const handleEventSaved = () => {
     setDataVersion((v) => v + 1);
   };
 
@@ -78,12 +111,20 @@ export default function WeekPage() {
 
       <main id="main-content" className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
         <WorkweekBoard
-          key={dataVersion}
           anchorDateStr={selectedDateStr}
           range={scheduleRange}
+          eventsVersion={dataVersion}
           onOpenDay={openDay}
+          onRequestCreateTimed={handleRequestCreateTimed}
+          onRequestEdit={handleRequestEdit}
+          onEventsChanged={handleEventSaved}
         />
       </main>
+      <EventDialog
+        config={eventDialogConfig}
+        onClose={() => setEventDialogConfig(null)}
+        onSaved={handleEventSaved}
+      />
     </motion.div>
   );
 }

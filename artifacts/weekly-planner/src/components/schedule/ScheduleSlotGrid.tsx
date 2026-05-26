@@ -9,7 +9,12 @@ import { cn } from "@/lib/utils";
 interface ScheduleSlotGridProps {
   range: DayScheduleRange;
   children?: ReactNode;
-  onSlotDoubleClick?: (slotStartMinute: number) => void;
+  /**
+   * Fires when an empty slot is clicked. Provides the slot's start minute.
+   * Chips render as siblings (absolutely positioned) so their clicks don't
+   * reach the slot rows.
+   */
+  onSlotClick?: (slotStartMinute: number) => void;
   className?: string;
   interactive?: boolean;
   granularity?: ScheduleTimelineGranularity;
@@ -18,7 +23,7 @@ interface ScheduleSlotGridProps {
 export function ScheduleSlotGrid({
   range,
   children,
-  onSlotDoubleClick,
+  onSlotClick,
   className,
   interactive = false,
   granularity = "halfHour",
@@ -37,17 +42,17 @@ export function ScheduleSlotGrid({
             "absolute left-0 right-0",
             index < timeline.ticks.length - 1 && "border-b border-border",
             interactive &&
-              "transition-colors motion-reduce:transition-none hover:bg-surface-subtle",
+              "cursor-pointer transition-colors motion-reduce:transition-none hover:bg-surface-subtle",
           )}
           style={{
             top: timeline.minuteToTop(m),
             height: timeline.rowHeightPx,
           }}
-          onDoubleClick={
-            onSlotDoubleClick
+          onClick={
+            onSlotClick
               ? (e) => {
                   e.preventDefault();
-                  onSlotDoubleClick(m);
+                  onSlotClick(m);
                 }
               : undefined
           }

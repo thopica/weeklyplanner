@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { addDays, format } from "date-fns";
 import { AlertCircle, Flag } from "lucide-react";
 import {
   Dialog,
@@ -28,6 +29,7 @@ import {
 import { projectEventsToDayBlocks } from "@/lib/event-projection";
 import { getCategories } from "@/lib/categories";
 import { paletteFor } from "@/lib/palette";
+import { parseLocalDateStr } from "@/lib/dates";
 import { hasTimeConflict, formatScheduleTime } from "@/lib/schedule";
 import {
   type CalendarEvent,
@@ -57,7 +59,8 @@ export interface EventDialogProps {
 
 interface FormState {
   title: string;
-  dateStr: string;
+  startDateStr: string;
+  endDateStr: string;
   allDay: boolean;
   startMin: number;
   endMin: number;
@@ -88,12 +91,42 @@ function minutesFromFloating(value: string): number {
   return h * 60 + m;
 }
 
-function endMinutesForEvent(event: CalendarEvent): number {
+/**
+ * Decide the form's `endDateStr` + `endMin` for an existing event. Single-day
+ * timed events ending exactly at next-day 00:00 collapse back to "same date,
+ * end time = 24:00" so users see them as same-day events ending at midnight.
+ */
+function deriveEndForEdit(event: CalendarEvent): {
+  endDateStr: string;
+  endMin: number;
+} {
   const startDate = event.startsAt.slice(0, 10);
   const endDate = event.endsAt.slice(0, 10);
-  if (endDate === startDate) return minutesFromFloating(event.endsAt);
-  // Multi-day or ends at next day's 00:00 -> treat as end-of-day for this dialog.
-  return 24 * 60;
+  const endTime = event.endsAt.slice(11, 19);
+
+  if (event.allDay) {
+    // endsAt is exclusive next-day midnight → last covered day = endDate - 1.
+    const last = format(
+      addDays(parseLocalDateStr(endDate), -1),
+      "yyyy-MM-dd",
+    );
+    return { endDateStr: last < startDate ? startDate : last, endMin: 24 * 60 };
+  }
+
+  if (endTime === "00:00:00" && endDate > startDate) {
+    const nextOfStart = format(
+      addDays(parseLocalDateStr(startDate), 1),
+      "yyyy-MM-dd",
+    );
+    if (endDate === nextOfStart) {
+      return { endDateStr: startDate, endMin: 24 * 60 };
+    }
+  }
+
+  return {
+    endDateStr: endDate,
+    endMin: minutesFromFloating(event.endsAt),
+  };
 }
 
 function initialStateFromConfig(
@@ -107,12 +140,15 @@ function initialStateFromConfig(
 
   if (config.mode === "edit") {
     const event = config.event;
+    const startDateStr = event.startsAt.slice(0, 10);
+    const { endDateStr, endMin } = deriveEndForEdit(event);
     return {
       title: event.title,
-      dateStr: event.startsAt.slice(0, 10),
+      startDateStr,
+      endDateStr,
       allDay: event.allDay,
       startMin: event.allDay ? 0 : minutesFromFloating(event.startsAt),
-      endMin: event.allDay ? 24 * 60 : endMinutesForEvent(event),
+      endMin,
       categoryId: event.categoryId || fallbackCategoryId,
       important: event.important,
     };
@@ -127,7 +163,8 @@ function initialStateFromConfig(
 
   return {
     title: "",
-    dateStr: config.defaultDateStr,
+    startDateStr: config.defaultDateStr,
+    endDateStr: config.defaultDateStr,
     allDay,
     startMin,
     endMin,
@@ -182,15 +219,64 @@ export function EventDialog({ config, onClose, onSaved }: EventDialogProps) {
     setFormError(null);
   };
 
-  const handleStartChange = (value: string) => {
+  const handleStartTimeChange = (value: string) => {
     const next = Number(value);
     setForm((f) => {
       if (!f) return f;
-      // Keep the existing duration if possible; otherwise snap end forward.
+      // Preserve duration if possible; otherwise snap end forward.
       const prevDur = Math.max(SLOT, f.endMin - f.startMin);
       const candidateEnd = Math.min(24 * 60, next + prevDur);
-      const endMin = candidateEnd > next ? candidateEnd : Math.min(24 * 60, next + SLOT);
+      const endMin =
+        candidateEnd > next ? candidateEnd : Math.min(24 * 60, next + SLOT);
       return { ...f, startMin: next, endMin };
+    });
+    setFormError(null);
+  };
+
+  const handleStartDateChange = (value: string) => {
+    setForm((f) => {
+      if (!f) return f;
+      // Timed events are always same-day: end tracks start.
+      // All-day events: bump end forward only when it would now precede start,
+      // preserving any range the user explicitly set.
+      const endDateStr = !f.allDay
+        ? value
+        : f.endDateStr < value
+          ? value
+          : f.endDateStr;
+      return { ...f, startDateStr: value, endDateStr };
+    });
+    setFormError(null);
+  };
+
+  const handleEndDateChange = (value: string) => {
+    setForm((f) => {
+      if (!f) return f;
+      // Clamp end date to never precede start date.
+      const endDateStr = value < f.startDateStr ? f.startDateStr : value;
+      return { ...f, endDateStr };
+    });
+    setFormError(null);
+  };
+
+  const handleAllDayToggle = (checked: boolean) => {
+    setForm((f) => {
+      if (!f) return f;
+      if (!checked) {
+        // Collapse any in-flight range so the saved record is single-day timed,
+        // and normalize the end time so endMin > startMin.
+        const endMin =
+          f.endMin > f.startMin
+            ? f.endMin
+            : Math.min(24 * 60, f.startMin + SLOT);
+        return {
+          ...f,
+          allDay: false,
+          endDateStr: f.startDateStr,
+          endMin,
+        };
+      }
+      return { ...f, allDay: true };
     });
     setFormError(null);
   };
@@ -198,16 +284,26 @@ export function EventDialog({ config, onClose, onSaved }: EventDialogProps) {
   const handleSave = () => {
     if (!form) return;
     const title = form.title.trim().slice(0, MAX_EVENT_TITLE_LENGTH);
-    const dateStr = form.dateStr;
+    const startDateStr = form.startDateStr;
 
-    if (!DATE_RE.test(dateStr)) {
+    if (!DATE_RE.test(startDateStr)) {
       setFormError("Pick a valid date.");
       return;
     }
 
     if (form.allDay) {
-      const startsAt = `${dateStr}T00:00:00`;
-      const endsAt = dayEndExclusive(dateStr);
+      const endDateStr = form.endDateStr;
+      if (!DATE_RE.test(endDateStr)) {
+        setFormError("Pick a valid end date.");
+        return;
+      }
+      if (endDateStr < startDateStr) {
+        setFormError("End date can't be before the start date.");
+        return;
+      }
+      const startsAt = `${startDateStr}T00:00:00`;
+      // endsAt is exclusive: the day after the last covered day.
+      const endsAt = dayEndExclusive(endDateStr);
       try {
         if (isEdit && editingId) {
           updateEvent(editingId, {
@@ -238,25 +334,32 @@ export function EventDialog({ config, onClose, onSaved }: EventDialogProps) {
       return;
     }
 
+    // Timed events are always same-day in this UI; the form invariant keeps
+    // endDateStr equal to startDateStr while All day is off.
     if (form.endMin <= form.startMin) {
       setFormError("End time must be after the start time.");
       return;
     }
 
     const duration = form.endMin - form.startMin;
-    const otherBlocks = projectEventsToDayBlocks(dateStr);
+    const otherBlocks = projectEventsToDayBlocks(startDateStr);
     if (
-      hasTimeConflict(form.startMin, duration, otherBlocks, editingId ?? undefined)
+      hasTimeConflict(
+        form.startMin,
+        duration,
+        otherBlocks,
+        editingId ?? undefined,
+      )
     ) {
       setFormError("This overlaps another event on that day.");
       return;
     }
 
-    const startsAt = buildFloatingDateTime(dateStr, form.startMin);
+    const startsAt = buildFloatingDateTime(startDateStr, form.startMin);
     const endsAt =
       form.endMin >= 24 * 60
-        ? dayEndExclusive(dateStr)
-        : buildFloatingDateTime(dateStr, form.endMin);
+        ? dayEndExclusive(startDateStr)
+        : buildFloatingDateTime(startDateStr, form.endMin);
 
     try {
       if (isEdit && editingId) {
@@ -345,16 +448,42 @@ export function EventDialog({ config, onClose, onSaved }: EventDialogProps) {
             />
           </div>
 
-          <div className="grid gap-2">
-            <Label htmlFor="event-date">Date</Label>
-            <Input
-              id="event-date"
-              type="date"
-              value={form.dateStr}
-              onChange={(e) => patch({ dateStr: e.target.value })}
-              data-testid="input-event-date"
-            />
-          </div>
+          {form.allDay ? (
+            <div className="grid grid-cols-2 gap-3">
+              <div className="grid gap-2">
+                <Label htmlFor="event-start-date">Start date</Label>
+                <Input
+                  id="event-start-date"
+                  type="date"
+                  value={form.startDateStr}
+                  onChange={(e) => handleStartDateChange(e.target.value)}
+                  data-testid="input-event-start-date"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="event-end-date">End date</Label>
+                <Input
+                  id="event-end-date"
+                  type="date"
+                  value={form.endDateStr}
+                  min={form.startDateStr}
+                  onChange={(e) => handleEndDateChange(e.target.value)}
+                  data-testid="input-event-end-date"
+                />
+              </div>
+            </div>
+          ) : (
+            <div className="grid gap-2">
+              <Label htmlFor="event-date">Date</Label>
+              <Input
+                id="event-date"
+                type="date"
+                value={form.startDateStr}
+                onChange={(e) => handleStartDateChange(e.target.value)}
+                data-testid="input-event-date"
+              />
+            </div>
+          )}
 
           <div className="flex items-center justify-between gap-3">
             <Label htmlFor="event-allday" className="cursor-pointer">
@@ -363,7 +492,7 @@ export function EventDialog({ config, onClose, onSaved }: EventDialogProps) {
             <Switch
               id="event-allday"
               checked={form.allDay}
-              onCheckedChange={(checked) => patch({ allDay: checked })}
+              onCheckedChange={handleAllDayToggle}
               data-testid="switch-event-allday"
             />
           </div>
@@ -374,9 +503,12 @@ export function EventDialog({ config, onClose, onSaved }: EventDialogProps) {
                 <Label htmlFor="event-start">Start</Label>
                 <Select
                   value={String(form.startMin)}
-                  onValueChange={handleStartChange}
+                  onValueChange={handleStartTimeChange}
                 >
-                  <SelectTrigger id="event-start" data-testid="select-event-start">
+                  <SelectTrigger
+                    id="event-start"
+                    data-testid="select-event-start"
+                  >
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent className="max-h-64">
@@ -394,7 +526,10 @@ export function EventDialog({ config, onClose, onSaved }: EventDialogProps) {
                   value={String(form.endMin)}
                   onValueChange={(v) => patch({ endMin: Number(v) })}
                 >
-                  <SelectTrigger id="event-end" data-testid="select-event-end">
+                  <SelectTrigger
+                    id="event-end"
+                    data-testid="select-event-end"
+                  >
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent className="max-h-64">
