@@ -29,14 +29,14 @@ export function WorkweekScheduleColumn({
   const { isResizing, resizingBlockId, startResize } = useScheduleBlockResize({
     blocks,
     range,
-    granularity: "hour",
+    granularity: "halfHour",
     onChange: (next) => onBlocksChange?.(next),
   });
 
   return (
     <ScheduleSlotGrid
       range={range}
-      granularity="hour"
+      granularity="halfHour"
       className="bg-transparent"
       interactive={!!onRequestCreate}
       onSlotClick={
@@ -53,7 +53,7 @@ export function WorkweekScheduleColumn({
           key={block.id}
           block={block}
           range={range}
-          granularity="hour"
+          granularity="halfHour"
           compact
           onClick={onRequestEdit}
           onResizeStart={onBlocksChange ? startResize : undefined}

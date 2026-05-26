@@ -4,6 +4,7 @@ import {
   type DayScheduleRange,
   type ScheduleTimelineGranularity,
   SLOT_MINUTES,
+  SNAP_MINUTES,
   hasTimeConflict,
   maxExclusiveEndForStart,
   snapToGrid,
@@ -28,8 +29,8 @@ interface UseScheduleBlockResizeOptions {
 
 /**
  * Drag a block's top or bottom edge in the schedule grid. Granularity-aware
- * (half-hour or hourly rows) but always snaps to `SLOT_MINUTES` (30 min) so
- * resized events line up with the existing event-time resolution.
+ * (half-hour or hourly rows) but always snaps to `SNAP_MINUTES` (15 min) so
+ * resized events line up with the event-time resolution.
  */
 export function useScheduleBlockResize({
   blocks,
@@ -73,7 +74,7 @@ export function useScheduleBlockResize({
 
       const deltaY = e.clientY - resize.originClientY;
       const deltaMin =
-        Math.round(deltaY / pxPerMin / SLOT_MINUTES) * SLOT_MINUTES;
+        Math.round(deltaY / pxPerMin / SNAP_MINUTES) * SNAP_MINUTES;
 
       if (resize.edge === "bottom") {
         const start = resize.origStart;
@@ -86,7 +87,7 @@ export function useScheduleBlockResize({
         );
         const maxDur = maxExclusive - start;
         const newDur = Math.min(
-          Math.max(SLOT_MINUTES, snapToGrid(resize.origDur + deltaMin)),
+          Math.max(SNAP_MINUTES, snapToGrid(resize.origDur + deltaMin)),
           maxDur,
         );
         if (newDur === block.durationMinutes) return;
@@ -103,11 +104,11 @@ export function useScheduleBlockResize({
         let newStart = snapToGrid(resize.origStart + deltaMin);
         newStart = Math.min(
           Math.max(r.startMin, newStart),
-          origEnd - SLOT_MINUTES,
+          origEnd - SNAP_MINUTES,
         );
         const newDur = origEnd - newStart;
         if (
-          newDur < SLOT_MINUTES ||
+          newDur < SNAP_MINUTES ||
           hasTimeConflict(newStart, newDur, bList, resize.blockId)
         ) {
           return;

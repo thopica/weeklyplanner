@@ -159,7 +159,7 @@ export function WorkweekBoard({
               >
                 <ScheduleTimeRail
                   range={range}
-                  granularity="hour"
+                  granularity="halfHour"
                   compact
                   className="border-r-0"
                 />

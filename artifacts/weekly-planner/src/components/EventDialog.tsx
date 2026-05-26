@@ -71,7 +71,7 @@ interface FormState {
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const DEFAULT_START_MIN = 9 * 60;
 const DEFAULT_DURATION_MIN = 60;
-const SLOT = 30;
+const SLOT = 15;
 
 function startTicks(): number[] {
   const out: number[] = [];

@@ -117,7 +117,7 @@ export function PomodoroFocusOverlay({
         >
           <X className="h-5 w-5" />
         </Button>
-        <motionSpacer />
+        <span aria-hidden />
       </header>
 
       <main className="relative z-10 flex flex-1 flex-col items-center justify-center px-6 pb-8">

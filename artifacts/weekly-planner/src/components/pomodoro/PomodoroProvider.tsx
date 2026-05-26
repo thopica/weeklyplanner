@@ -84,6 +84,7 @@ export function PomodoroProvider({ children }: { children: ReactNode }) {
     }
 
     document.title = base;
+    return;
   }, [timer.status, timer.countdownLabel, timer.phaseTitle]);
 
   const value = useMemo(

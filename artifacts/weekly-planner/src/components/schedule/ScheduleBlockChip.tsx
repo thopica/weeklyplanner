@@ -44,18 +44,11 @@ export function ScheduleBlockChip({
   const resizable = !!onResizeStart;
 
   const baseClass = cn(
-    "absolute left-0.5 right-0.5 z-10 flex flex-col overflow-hidden rounded border border-primary/80 bg-surface-accent text-left shadow-sm ring-1 ring-border",
+    "absolute left-0.5 right-0.5 z-10 overflow-hidden rounded border border-primary/80 bg-surface-accent text-left shadow-sm ring-1 ring-border",
   );
 
   const body = (
     <>
-      {resizable ? (
-        <div
-          className="shrink-0 cursor-ns-resize bg-muted/70 py-0.5 hover:bg-accent"
-          onMouseDown={(e) => onResizeStart(e, block, "top")}
-          aria-hidden
-        />
-      ) : null}
       {onClick ? (
         <button
           type="button"
@@ -66,7 +59,7 @@ export function ScheduleBlockChip({
           }}
           title={formatBlockRange(block)}
           className={cn(
-            "min-h-0 flex-1 px-1.5 text-left text-foreground transition-colors hover:bg-accent disabled:pointer-events-none focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset",
+            "absolute inset-0 flex min-h-0 flex-col justify-center px-1.5 text-left text-foreground transition-colors hover:bg-accent disabled:pointer-events-none focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset",
             compact ? "py-0.5" : "py-1",
           )}
           data-testid={`schedule-chip-${block.startMinute}`}
@@ -87,7 +80,10 @@ export function ScheduleBlockChip({
         </button>
       ) : (
         <div
-          className={cn("min-h-0 flex-1 px-1.5", compact ? "py-0.5" : "py-1")}
+          className={cn(
+            "absolute inset-0 flex min-h-0 flex-col justify-center px-1.5",
+            compact ? "py-0.5" : "py-1",
+          )}
           title={formatBlockRange(block)}
         >
           <span
@@ -106,11 +102,18 @@ export function ScheduleBlockChip({
         </div>
       )}
       {resizable ? (
-        <div
-          className="shrink-0 cursor-ns-resize bg-muted/70 py-0.5 hover:bg-accent"
-          onMouseDown={(e) => onResizeStart(e, block, "bottom")}
-          aria-hidden
-        />
+        <>
+          <div
+            className="absolute inset-x-0 top-0 z-20 h-1 cursor-ns-resize bg-transparent transition-colors hover:bg-accent"
+            onMouseDown={(e) => onResizeStart(e, block, "top")}
+            aria-hidden
+          />
+          <div
+            className="absolute inset-x-0 bottom-0 z-20 h-1 cursor-ns-resize bg-transparent transition-colors hover:bg-accent"
+            onMouseDown={(e) => onResizeStart(e, block, "bottom")}
+            aria-hidden
+          />
+        </>
       ) : null}
     </>
   );

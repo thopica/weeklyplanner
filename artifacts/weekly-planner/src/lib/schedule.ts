@@ -1,10 +1,13 @@
 import { addMinutes, startOfDay } from "date-fns";
 import type { TimeBlock } from "./types";
 
-/** Grid step and minimum block length. */
+/** Snap step and minimum block length for events (minutes). */
+export const SNAP_MINUTES = 15;
+
+/** Visual row size: one half-hour slot. Drives rail labels and pixel layout. */
 export const SLOT_MINUTES = 30;
 
-/** Row height for one 30-minute slot (px). */
+/** Row height for one 30-minute visual slot (px). */
 export const PX_PER_SLOT = 32;
 
 /** Inset so hour labels centered on grid lines are not clipped at range start/end. */
@@ -14,9 +17,9 @@ export const TIMELINE_EDGE_INSET_PX = PX_PER_SLOT / 2;
 export const CALENDAR_DAY_END_MIN = 24 * 60;
 
 export type DayScheduleRange = {
-  /** First visible 30-minute row (minutes from midnight). */
+  /** First visible row (minutes from midnight, half-hour aligned). */
   startMin: number;
-  /** End of the visible work day (minutes from midnight, exclusive). Blocks must end at or before this. */
+  /** End of the visible work day (minutes from midnight, exclusive, half-hour aligned). Blocks must end at or before this. */
   endMin: number;
 };
 
@@ -27,7 +30,7 @@ export const OUTLOOK_DEFAULT_DAY_RANGE: DayScheduleRange = {
 };
 
 export function snapToGrid(minutes: number): number {
-  return Math.round(minutes / SLOT_MINUTES) * SLOT_MINUTES;
+  return Math.round(minutes / SNAP_MINUTES) * SNAP_MINUTES;
 }
 
 
@@ -35,8 +38,13 @@ export function normalizeScheduleRange(p: {
   startMin: number;
   endMin: number;
 }): DayScheduleRange {
-  let start = snapToGrid(Math.max(0, Math.min(p.startMin, CALENDAR_DAY_END_MIN - SLOT_MINUTES)));
-  let end = snapToGrid(Math.max(0, Math.min(p.endMin, CALENDAR_DAY_END_MIN)));
+  // Workday window stays half-hour aligned to match the rail labels.
+  const snapHalfHour = (m: number) =>
+    Math.round(m / SLOT_MINUTES) * SLOT_MINUTES;
+  let start = snapHalfHour(
+    Math.max(0, Math.min(p.startMin, CALENDAR_DAY_END_MIN - SLOT_MINUTES)),
+  );
+  let end = snapHalfHour(Math.max(0, Math.min(p.endMin, CALENDAR_DAY_END_MIN)));
   if (end <= start + SLOT_MINUTES) {
     end = Math.min(CALENDAR_DAY_END_MIN, start + 4 * SLOT_MINUTES);
   }
@@ -141,9 +149,9 @@ export function blockHeightPxHourly(durationMinutes: number): number {
   return (durationMinutes / 60) * PX_PER_HOUR;
 }
 
-/** Latest valid block start on the grid for the given range (30-min aligned). */
+/** Latest valid block start on the grid for the given range (snap-aligned). */
 export function lastSlotStartInRange(range: DayScheduleRange): number {
-  return range.endMin - SLOT_MINUTES;
+  return range.endMin - SNAP_MINUTES;
 }
 
 export function maxDurationForStart(
@@ -151,7 +159,7 @@ export function maxDurationForStart(
   range: DayScheduleRange,
 ): number {
   const raw = range.endMin - startMinute;
-  return Math.max(SLOT_MINUTES, Math.floor(raw / SLOT_MINUTES) * SLOT_MINUTES);
+  return Math.max(SNAP_MINUTES, Math.floor(raw / SNAP_MINUTES) * SNAP_MINUTES);
 }
 
 export function clampBlockDuration(
@@ -161,7 +169,7 @@ export function clampBlockDuration(
 ): number {
   const snapped = snapToGrid(durationMinutes);
   const max = maxDurationForStart(startMinute, range);
-  return Math.min(Math.max(snapped, SLOT_MINUTES), max);
+  return Math.min(Math.max(snapped, SNAP_MINUTES), max);
 }
 
 export function clampBlockStart(
@@ -179,7 +187,7 @@ export function clampStartWithDuration(
   range: DayScheduleRange,
 ): number {
   const snapped = snapToGrid(startMinute);
-  const dur = Math.max(SLOT_MINUTES, snapToGrid(durationMinutes));
+  const dur = Math.max(SNAP_MINUTES, snapToGrid(durationMinutes));
   const maxStart = range.endMin - dur;
   return Math.min(Math.max(snapped, range.startMin), maxStart);
 }
@@ -234,7 +242,7 @@ export function validDurationsFromStart(
 ): number[] {
   const out: number[] = [];
   const max = maxDurationForStart(start, range);
-  for (let d = SLOT_MINUTES; d <= max; d += SLOT_MINUTES) {
+  for (let d = SNAP_MINUTES; d <= max; d += SNAP_MINUTES) {
     if (!hasTimeConflict(start, d, blocks, ignoreId)) out.push(d);
   }
   return out;
@@ -248,9 +256,9 @@ export function validExclusiveEndsFromStart(
 ): number[] {
   const out: number[] = [];
   for (
-    let end = start + SLOT_MINUTES;
+    let end = start + SNAP_MINUTES;
     end <= range.endMin;
-    end += SLOT_MINUTES
+    end += SNAP_MINUTES
   ) {
     const dur = end - start;
     if (!hasTimeConflict(start, dur, blocks, ignoreId)) out.push(end);
@@ -268,12 +276,12 @@ export function nextDefaultStartMinute(
     range.startMin,
   );
   const snapped =
-    Math.ceil(latestEnd / SLOT_MINUTES) * SLOT_MINUTES;
+    Math.ceil(latestEnd / SNAP_MINUTES) * SNAP_MINUTES;
   if (snapped >= range.endMin) return range.startMin;
   return Math.min(snapped, lastSlotStartInRange(range));
 }
 
-/** Clip time blocks into [range.startMin, range.endMin); drops if shorter than one slot. */
+/** Clip time blocks into [range.startMin, range.endMin); drops if shorter than one snap step. */
 export function normalizeBlocksToRange(
   blocks: TimeBlock[],
   range: DayScheduleRange,
@@ -286,10 +294,10 @@ export function normalizeBlocksToRange(
     e = Math.min(e, range.endMin);
     if (e <= s) continue;
     let dur = snapToGrid(e - s);
-    if (dur < SLOT_MINUTES) continue;
+    if (dur < SNAP_MINUTES) continue;
     s = clampBlockStart(s, range);
     dur = clampBlockDuration(s, dur, range);
-    if (dur < SLOT_MINUTES) continue;
+    if (dur < SNAP_MINUTES) continue;
     out.push({ ...b, startMinute: s, durationMinutes: dur });
   }
   return out;

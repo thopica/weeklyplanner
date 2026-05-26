@@ -33,7 +33,7 @@ import {
   clampDayScheduleRange,
   normalizeBlocksToRange,
   OUTLOOK_DEFAULT_DAY_RANGE,
-  SLOT_MINUTES,
+  SNAP_MINUTES,
 } from './schedule';
 import {
   DEFAULT_POMODORO_SETTINGS,
@@ -147,7 +147,7 @@ function migrateTimeBlocks(
         startMinute: cs,
         durationMinutes: clampBlockDuration(
           cs,
-          Number.isFinite(dm) && dm >= SLOT_MINUTES ? dm : SLOT_MINUTES,
+          Number.isFinite(dm) && dm >= SNAP_MINUTES ? dm : SNAP_MINUTES,
           range,
         ),
       };
