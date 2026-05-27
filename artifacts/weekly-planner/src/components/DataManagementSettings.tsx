@@ -44,7 +44,8 @@ export function DataManagementSettings({
     onDataReset();
     toast({
       title: "Demo data loaded",
-      description: "30 days of sample tasks and habits are ready. Open Insights or Today on the planner.",
+      description:
+        "30 days of sample tasks, habits, and calendar events are ready. Try Month view or Insights.",
     });
   };
 

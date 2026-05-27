@@ -16,16 +16,21 @@ import {
   CategoryDefinition,
 } from './types';
 import {
+  buildFloatingDateTime,
+  dayEndExclusive,
   getEvents,
   saveEvents,
   normalizeEventList,
   migrateTimeBlocksToEventsIfNeeded,
 } from './events';
 import {
+  clearDeletedDefaults,
+  DEFAULT_CATEGORIES,
   getCategories,
   reconcileDeletedDefaultsFromList,
   saveCategories,
 } from './categories';
+import { getMonthGrid } from './month';
 import {
   type DayScheduleRange,
   clampBlockDuration,
@@ -732,13 +737,7 @@ function buildDemoInsightsDay(
         demoTask("g4", dateStr, "Schedule dentist appointment", false, 16),
         demoTask("g5", dateStr, "Clean inbox", false, 17),
       ],
-      timeBlocks: [
-        { id: `demo-${dateStr}-1`, startMinute: 8 * 60, durationMinutes: 90, label: "Morning routine & coffee" },
-        { id: `demo-${dateStr}-2`, startMinute: 10 * 60, durationMinutes: 120, label: "Deep work: proposal" },
-        { id: `demo-${dateStr}-3`, startMinute: 13 * 60, durationMinutes: 60, label: "Lunch break" },
-        { id: `demo-${dateStr}-4`, startMinute: 14 * 60 + 30, durationMinutes: 30, label: "Team check-in" },
-        { id: `demo-${dateStr}-5`, startMinute: 15 * 60, durationMinutes: 120, label: "Afternoon focus" },
-      ],
+      timeBlocks: [],
       meals: { breakfast: "Oatmeal with berries", lunch: "Salad bowl", dinner: "Pasta" },
       gratitude: ["Sunshine today", "Good coffee", "Finishing a big task"],
       brainDump:
@@ -815,6 +814,223 @@ function buildDemoInsightsDay(
   };
 }
 
+const EVENTS_MIGRATION_FLAG_KEY = "weeklyPlanner_eventsMigrated";
+
+function demoCalendarEvent(
+  id: string,
+  title: string,
+  categoryId: string,
+  opts: {
+    startDate: string;
+    /** Inclusive last day for all-day spans; defaults to startDate. */
+    endDate?: string;
+    allDay?: boolean;
+    startMin?: number;
+    endMin?: number;
+    important?: boolean;
+  },
+): CalendarEvent {
+  const allDay = opts.allDay ?? false;
+  const important = opts.important ?? false;
+
+  if (allDay) {
+    const lastDay = opts.endDate ?? opts.startDate;
+    return {
+      id,
+      title,
+      startsAt: `${opts.startDate}T00:00:00`,
+      endsAt: dayEndExclusive(lastDay),
+      allDay: true,
+      categoryId,
+      important,
+    };
+  }
+
+  const startMin = opts.startMin ?? 9 * 60;
+  const endMin = opts.endMin ?? startMin + 60;
+  const endDate = opts.endDate ?? opts.startDate;
+  const endsAt =
+    endMin >= 24 * 60
+      ? dayEndExclusive(endDate)
+      : buildFloatingDateTime(endDate, endMin);
+
+  return {
+    id,
+    title,
+    startsAt: buildFloatingDateTime(opts.startDate, startMin),
+    endsAt,
+    allDay: false,
+    categoryId,
+    important,
+  };
+}
+
+/**
+ * Curated calendar events for month-view demos: categories, important flag,
+ * all-day / multi-day bands, 15-minute timed slots, and an overflow-heavy anchor day.
+ */
+function buildDemoCalendarEvents(
+  _demoDates: Iterable<string>,
+  anchorDateStr: string,
+): CalendarEvent[] {
+  const anchor = parseLocalDateStr(anchorDateStr);
+  const ds = (offset: number) => format(addDays(anchor, offset), "yyyy-MM-dd");
+
+  return [
+    // Multi-day bands
+    demoCalendarEvent("demo-evt-offsite", "Team offsite", "work", {
+      startDate: ds(-9),
+      endDate: ds(-7),
+      allDay: true,
+    }),
+    demoCalendarEvent("demo-evt-vacation", "Vacation", "personal", {
+      startDate: ds(5),
+      endDate: ds(9),
+      allDay: true,
+    }),
+    demoCalendarEvent("demo-evt-conference", "Design conference", "work", {
+      startDate: ds(-3),
+      endDate: ds(-1),
+      allDay: true,
+    }),
+
+    // Single-day all-day
+    demoCalendarEvent("demo-evt-birthday", "Mom's birthday", "family", {
+      startDate: ds(-5),
+      allDay: true,
+    }),
+    demoCalendarEvent("demo-evt-holiday", "Public holiday", "personal", {
+      startDate: ds(18),
+      allDay: true,
+    }),
+    demoCalendarEvent("demo-evt-tax", "Tax filing deadline", "personal", {
+      startDate: ds(14),
+      allDay: true,
+      important: true,
+    }),
+
+    // Important timed
+    demoCalendarEvent("demo-evt-board", "Board presentation", "work", {
+      startDate: ds(2),
+      startMin: 14 * 60,
+      endMin: 15 * 60 + 30,
+      important: true,
+    }),
+    demoCalendarEvent("demo-evt-review", "Annual performance review", "work", {
+      startDate: ds(-12),
+      startMin: 10 * 60,
+      endMin: 11 * 60,
+      important: true,
+    }),
+
+    // Anchor day — dense single-day schedule (overflow "+N more")
+    demoCalendarEvent("demo-evt-standup", "Standup", "work", {
+      startDate: anchorDateStr,
+      startMin: 9 * 60 + 15,
+      endMin: 9 * 60 + 30,
+    }),
+    demoCalendarEvent("demo-evt-sync", "Client sync", "work", {
+      startDate: anchorDateStr,
+      startMin: 10 * 60,
+      endMin: 11 * 60,
+    }),
+    demoCalendarEvent("demo-evt-lunch", "Lunch with team", "social", {
+      startDate: anchorDateStr,
+      startMin: 12 * 60,
+      endMin: 13 * 60,
+    }),
+    demoCalendarEvent("demo-evt-deepwork", "Deep work block", "work", {
+      startDate: anchorDateStr,
+      startMin: 13 * 60 + 30,
+      endMin: 14 * 60 + 15,
+    }),
+    demoCalendarEvent("demo-evt-coffee", "Coffee with Alex", "social", {
+      startDate: anchorDateStr,
+      startMin: 15 * 60,
+      endMin: 15 * 60 + 45,
+    }),
+    demoCalendarEvent("demo-evt-slides", "Prep slides", "work", {
+      startDate: anchorDateStr,
+      startMin: 16 * 60,
+      endMin: 16 * 60 + 45,
+    }),
+    demoCalendarEvent("demo-evt-milestone", "Ship milestone", "work", {
+      startDate: anchorDateStr,
+      allDay: true,
+    }),
+
+    // Spread across the demo window
+    demoCalendarEvent("demo-evt-planning", "Quarterly planning", "work", {
+      startDate: ds(-22),
+      allDay: true,
+    }),
+    demoCalendarEvent("demo-evt-gym", "Gym session", "health", {
+      startDate: ds(-18),
+      startMin: 7 * 60,
+      endMin: 8 * 60,
+    }),
+    demoCalendarEvent("demo-evt-yoga", "Yoga class", "health", {
+      startDate: ds(-11),
+      startMin: 18 * 60 + 30,
+      endMin: 19 * 60 + 30,
+    }),
+    demoCalendarEvent("demo-evt-bookclub", "Book club", "social", {
+      startDate: ds(-6),
+      startMin: 19 * 60,
+      endMin: 20 * 60 + 30,
+    }),
+    demoCalendarEvent("demo-evt-flight", "Flight to Berlin", "work", {
+      startDate: ds(-2),
+      startMin: 9 * 60,
+      endMin: 12 * 60 + 30,
+    }),
+    demoCalendarEvent("demo-evt-dinner", "Dinner with friends", "social", {
+      startDate: ds(3),
+      startMin: 19 * 60,
+      endMin: 21 * 60,
+    }),
+    demoCalendarEvent("demo-evt-doctor", "Doctor checkup", "health", {
+      startDate: ds(8),
+      startMin: 11 * 60 + 15,
+      endMin: 12 * 60,
+    }),
+    demoCalendarEvent("demo-evt-soccer", "Kids soccer practice", "family", {
+      startDate: ds(11),
+      startMin: 16 * 60 + 30,
+      endMin: 18 * 60,
+    }),
+    demoCalendarEvent("demo-evt-workshop", "Workshop: React patterns", "work", {
+      startDate: ds(16),
+      startMin: 13 * 60,
+      endMin: 16 * 60,
+    }),
+    demoCalendarEvent("demo-evt-brunch", "Family brunch", "family", {
+      startDate: ds(20),
+      startMin: 10 * 60 + 30,
+      endMin: 12 * 60 + 30,
+    }),
+    demoCalendarEvent("demo-evt-networking", "Networking evening", "social", {
+      startDate: ds(-15),
+      startMin: 17 * 60 + 30,
+      endMin: 19 * 60 + 30,
+    }),
+    demoCalendarEvent("demo-evt-1on1", "1:1 with manager", "work", {
+      startDate: ds(-4),
+      startMin: 11 * 60 + 30,
+      endMin: 12 * 60 + 15,
+    }),
+    demoCalendarEvent("demo-evt-errands", "Errands", "personal", {
+      startDate: ds(7),
+      allDay: true,
+    }),
+    demoCalendarEvent("demo-evt-presentation", "Product demo", "work", {
+      startDate: ds(4),
+      startMin: 15 * 60 + 15,
+      endMin: 16 * 60 + 15,
+    }),
+  ];
+}
+
 export function loadDemoData(anchorDateStr: string): StorageWriteResult {
   const habitCreatedAt = subDays(parseLocalDateStr(todayStr()), 45).toISOString();
   const demoHabitRun: HabitDefinition = {
@@ -868,9 +1084,22 @@ export function loadDemoData(anchorDateStr: string): StorageWriteResult {
   const plannerResult = savePlannerData(data);
   if (!plannerResult.ok) return plannerResult;
 
+  const demoDates = new Set<string>(filledDates);
+  demoDates.add(anchorDateStr);
+  for (const cell of getMonthGrid(anchorDateStr)) {
+    demoDates.add(cell.dateStr);
+  }
+
+  clearDeletedDefaults();
+  saveCategories(DEFAULT_CATEGORIES.map((c) => ({ ...c })));
+
   localStorage.removeItem("weeklyPlanner_events");
-  localStorage.removeItem("weeklyPlanner_eventsMigrated");
-  migrateTimeBlocksToEventsIfNeeded(data);
+  saveEvents(buildDemoCalendarEvents(demoDates, anchorDateStr));
+  try {
+    localStorage.setItem(EVENTS_MIGRATION_FLAG_KEY, "true");
+  } catch (e) {
+    console.error("Failed to set events migration flag", e);
+  }
 
   return saveSelectedDate(end);
 }
